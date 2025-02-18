@@ -1,142 +1,250 @@
-import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart';
-import 'package:intl/intl.dart';
-import 'dart:math' as math;
+  import 'package:flutter/material.dart';
+  import 'package:google_maps_flutter/google_maps_flutter.dart';
+  import 'package:location/location.dart';
+  import 'package:intl/intl.dart';
+  import 'dart:math' as math;
+  import 'package:absensi_app/services/absen_service.dart';
+  import 'package:logger/logger.dart';
 
-class AbsensiPage extends StatefulWidget {
-  const AbsensiPage({super.key});
+  class AbsensiPage extends StatefulWidget {
+    const AbsensiPage({super.key});
 
-  @override
-  _AbsensiPageState createState() => _AbsensiPageState();
-}
-
-class _AbsensiPageState extends State<AbsensiPage> {
-  GoogleMapController? _mapController;
-  Location _location = Location();
-  LatLng _currentPosition = const LatLng(-6.200000, 106.816666);
-  String? _absenMasuk;
-  String? _absenKeluar;
-  Set<Marker> _markers = {};
-
-  // Lokasi kantor (statis)
-  final LatLng _officeLocation = const LatLng(-0.943739, 100.396090);
-  final double _allowedRadius = 50; // dalam meter
-  bool _isWithinRadius = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _getCurrentLocation();
-    // Tambahkan marker untuk lokasi kantor
-    _markers.add(
-      Marker(
-        markerId: const MarkerId('office'),
-        position: _officeLocation,
-        infoWindow: const InfoWindow(title: "Lokasi Kantor"),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-      ),
-    );
+    @override
+    _AbsensiPageState createState() => _AbsensiPageState();
   }
 
-  // Fungsi untuk menghitung jarak antara dua koordinat
-  double _calculateDistance(LatLng point1, LatLng point2) {
-    const double earthRadius = 6371000; // meter
-    double lat1 = point1.latitude * math.pi / 180;
-    double lat2 = point2.latitude * math.pi / 180;
-    double lon1 = point1.longitude * math.pi / 180;
-    double lon2 = point2.longitude * math.pi / 180;
+  class _AbsensiPageState extends State<AbsensiPage> {
+    final AbsenService _absenService = AbsenService();
+    GoogleMapController? _mapController;
+    Location _location = Location();
+    LatLng _currentPosition = const LatLng(-6.200000, 106.816666);
+    String? _absenMasuk;
+    String? _absenKeluar;
+    Set<Marker> _markers = {};
+    bool _isLoading = false;
 
-    double dLat = lat2 - lat1;
-    double dLon = lon2 - lon1;
+    // Lokasi kantor (statis)
+    final LatLng _officeLocation = const LatLng(-0.943739, 100.396090);
+    final double _allowedRadius = 50; // dalam meter
+    bool _isWithinRadius = false;
+    final logger = Logger();
 
-    double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1) * math.cos(lat2) *
-            math.sin(dLon / 2) * math.sin(dLon / 2);
-    double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    return earthRadius * c;
-  }
-
-  Future<void> _getCurrentLocation() async {
-    bool serviceEnabled;
-    PermissionStatus permissionGranted;
-
-    serviceEnabled = await _location.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await _location.requestService();
-      if (!serviceEnabled) return;
-    }
-
-    permissionGranted = await _location.hasPermission();
-    if (permissionGranted == PermissionStatus.denied) {
-      permissionGranted = await _location.requestPermission();
-      if (permissionGranted != PermissionStatus.granted) return;
-    }
-
-    var locationData = await _location.getLocation();
-    LatLng newPosition = LatLng(locationData.latitude!, locationData.longitude!);
-
-    // Hitung jarak ke kantor
-    double distance = _calculateDistance(newPosition, _officeLocation);
-    bool isWithinRadius = distance <= _allowedRadius;
-
-    setState(() {
-      _currentPosition = newPosition;
-      _isWithinRadius = isWithinRadius;
-      _markers = {
-        ..._markers,
+    @override
+    void initState() {
+      super.initState();
+      _getCurrentLocation();
+      _loadTodayAbsen();
+      _initMarkers();
+      _markers.add(
         Marker(
-          markerId: const MarkerId('currentLocation'),
-          position: newPosition,
-          infoWindow: const InfoWindow(title: "Lokasi Anda"),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ),
-      };
-    });
-
-    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(newPosition, 18));
-  }
-
-  void _absen(bool isMasuk) {
-    if (!_isWithinRadius) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Anda harus berada dalam radius kantor untuk melakukan absensi'),
-          backgroundColor: Colors.red,
+          markerId: const MarkerId('office'),
+          position: _officeLocation,
+          infoWindow: const InfoWindow(title: "Lokasi Kantor"),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
         ),
       );
-      return;
     }
 
-    String waktu = DateFormat('HH:mm:ss, dd MMM yyyy').format(DateTime.now());
-    setState(() {
-      if (isMasuk) {
-        _absenMasuk = waktu;
+    Future<void> _loadTodayAbsen() async {
+      final result = await _absenService.getAbsenToday();
+      bool isSuccess = result['success'] ?? false; // Hindari error null
+
+      if (isSuccess) {
+        logger.d('Successss: $result >>>>>>>');
+
+        final todayAbsen = result['data'];
+        logger.d("Today Absen: $todayAbsen");
+
+        setState(() {
+          _absenMasuk = todayAbsen['jam_masuk'] != null
+              ? DateFormat('HH:mm:ss, dd MMM yyyy')
+              .format(DateTime.parse(todayAbsen['jam_masuk']))
+              : null;
+          _absenKeluar = todayAbsen['jam_keluar'] != null
+              ? DateFormat('HH:mm:ss, dd MMM yyyy')
+              .format(DateTime.parse(todayAbsen['jam_keluar']))
+              : null;
+        });
       } else {
-        _absenKeluar = waktu;
+        setState(() {
+          _absenMasuk = null;
+          _absenKeluar = null;
+        });
       }
-    });
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Berhasil melakukan absen ${isMasuk ? "masuk" : "keluar"}'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
+    double _calculateDistance(LatLng point1, LatLng point2) {
+      const double earthRadius = 6371000;
+      double lat1 = point1.latitude * math.pi / 180;
+      double lat2 = point2.latitude * math.pi / 180;
+      double lon1 = point1.longitude * math.pi / 180;
+      double lon2 = point2.longitude * math.pi / 180;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Absensi Karyawan'),
-        backgroundColor: Colors.blue,
-        elevation: 2,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            flex: 2,
+      double dLat = lat2 - lat1;
+      double dLon = lon2 - lon1;
+
+      double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+          math.cos(lat1) * math.cos(lat2) *
+              math.sin(dLon / 2) * math.sin(dLon / 2);
+      double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+      return earthRadius * c;
+    }
+
+    Future<void> _initMarkers() async {
+      BitmapDescriptor officeIcon = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(48, 48)), // Ukuran gambar marker
+        'assets/images/office_marker.png',
+      );
+
+      setState(() {
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('office'),
+            position: _officeLocation,
+            infoWindow: const InfoWindow(title: "Lokasi Kantor"),
+            icon: officeIcon, // Pakai ikon kustom
+          ),
+        );
+      });
+    }
+
+
+    Future<void> _getCurrentLocation() async {
+      bool serviceEnabled;
+      PermissionStatus permissionGranted;
+
+      serviceEnabled = await _location.serviceEnabled();
+      if (!serviceEnabled) {
+        serviceEnabled = await _location.requestService();
+        if (!serviceEnabled) return;
+      }
+
+      permissionGranted = await _location.hasPermission();
+      if (permissionGranted == PermissionStatus.denied) {
+        permissionGranted = await _location.requestPermission();
+        if (permissionGranted != PermissionStatus.granted) return;
+      }
+
+      var locationData = await _location.getLocation();
+      LatLng newPosition = LatLng(locationData.latitude!, locationData.longitude!);
+
+      double distance = _calculateDistance(newPosition, _officeLocation);
+      bool isWithinRadius = distance <= _allowedRadius;
+
+      setState(() {
+        _currentPosition = newPosition;
+        _isWithinRadius = isWithinRadius;
+      });
+
+      // Otomatis arahkan ke lokasi terbaru
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(newPosition, 18));
+    }
+
+
+    Future<void> _absen(bool isMasuk) async {
+      logger.d('Absen $isMasuk');
+      if (!_isWithinRadius) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Anda harus berada dalam radius kantor untuk melakukan absensi'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      setState(() => _isLoading = true);
+
+      try {
+        final result = await _absenService.createAbsen(
+          isMasuk,
+          _currentPosition.latitude,
+          _currentPosition.longitude,
+        );
+
+        logger.d('Hasil Absen: $result >>>>>>>');
+        if (result['success']) {
+          await _loadTodayAbsen(); // Reload absen data
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Berhasil melakukan absen ${isMasuk ? "masuk" : "keluar"}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Unknown error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        logger.e("Error saat absen: $e");
+      } finally {
+        setState(() => _isLoading = false);
+      }
+    }
+
+    @override
+    Widget build(BuildContext context) {
+      final theme = Theme.of(context);
+      return Scaffold(
+        backgroundColor: Colors.blue[50],
+        appBar: AppBar(
+          title: const Text(
+            'Absensi',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                _buildMapSection(),
+                _buildBottomSection(theme),
+              ],
+            ),
+            if (_isLoading)
+              Container(
+                color: Colors.black.withOpacity(0.5),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+          ],
+        ),
+
+      );
+    }
+
+    Widget _buildMapSection() {
+      return Expanded(
+        flex: 2,
+        child: Container(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 2,
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
             child: Stack(
               children: [
                 GoogleMap(
@@ -154,141 +262,204 @@ class _AbsensiPageState extends State<AbsensiPage> {
                       circleId: const CircleId('officeRadius'),
                       center: _officeLocation,
                       radius: _allowedRadius,
-                      fillColor: Colors.blue.withOpacity(0.2),
-                      strokeColor: Colors.blue,
-                      strokeWidth: 1,
+                      fillColor: Colors.blue.withOpacity(0.1),
+                      strokeColor: Colors.blue[300]!,
+                      strokeWidth: 2,
                     ),
                   },
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
                 ),
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  right: 16,
-                  child: Card(
-                    elevation: 4,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        _isWithinRadius
-                            ? 'Anda berada dalam radius kantor'
-                            : 'Anda berada di luar radius kantor',
-                        style: TextStyle(
-                          color: _isWithinRadius ? Colors.green : Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ),
+                _buildLocationStatus(),
               ],
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, -2),
+        ),
+      );
+    }
+
+    Widget _buildLocationStatus() {
+      return Positioned(
+        top: 16,
+        left: 16,
+        right: 16,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: _isWithinRadius ? Colors.green[400] : Colors.red[400],
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                _isWithinRadius ? Icons.check_circle : Icons.warning,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _isWithinRadius
+                    ? 'Dalam radius kantor'
+                    : 'Di luar radius kantor',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget _buildBottomSection(ThemeData theme) {
+      return Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildAttendanceStatus(),
+            const SizedBox(height: 24),
+            _buildAttendanceButtons(theme),
+          ],
+        ),
+      );
+    }
+
+    Widget _buildAttendanceStatus() {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.blue[50],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            _buildAttendanceRow(
+              'Absen Masuk',
+              _absenMasuk,
+              Icons.login,
+              Colors.green,
             ),
-            padding: const EdgeInsets.all(16.0),
+            if (_absenMasuk != null) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Divider(),
+              ),
+              _buildAttendanceRow(
+                'Absen Keluar',
+                _absenKeluar,
+                Icons.logout,
+                Colors.red,
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    Widget _buildAttendanceRow(
+        String label,
+        String? value,
+        IconData icon,
+        Color color,
+        ) {
+      return Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: ElevatedButton(
-                          onPressed: () => _absen(true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            'Absen Masuk',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: ElevatedButton(
-                          onPressed: () => _absen(false),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            'Absen Keluar',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
                   ),
-                  child: Column(
-                    children: [
-                      _buildAbsenInfo('Absen Masuk', _absenMasuk),
-                      const SizedBox(height: 8),
-                      _buildAbsenInfo('Absen Keluar', _absenKeluar),
-                    ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value ?? "Belum absen",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: value != null ? Colors.black87 : Colors.grey,
                   ),
                 ),
               ],
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _getCurrentLocation,
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.my_location),
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildAbsenInfo(String label, String? value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+    Widget _buildAttendanceButtons(ThemeData theme) {
+      return Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: _absenMasuk == null ? () => _absen(true) : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[400],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              icon: const Icon(Icons.login),
+              label: const Text(
+                'Absen Masuk',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           ),
-        ),
-        Text(
-          value ?? "Belum absen",
-          style: TextStyle(
-            fontSize: 16,
-            color: value != null ? Colors.black : Colors.grey,
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: _absenMasuk != null && _absenKeluar == null
+                  ? () => _absen(false)
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[400],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              icon: const Icon(Icons.logout),
+              label: const Text(
+                'Absen Keluar',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    }
   }
-}
