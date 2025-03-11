@@ -10,10 +10,7 @@ class AuthService {
   Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/auth/login');
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? deviceId = prefs.getString("deviceId") ?? ""; // Ambil dari SharedPreferences
-
-    logger.d("Device ID auth: $deviceId");
-
+    String? deviceId = prefs.getString("deviceId") ?? ""; 
     try {
       final response = await http.post(
         url,

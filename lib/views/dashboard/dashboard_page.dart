@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/auth_service.dart';
 import '../../services/absen_service.dart';
-
+import '../leave/leave_form_page.dart';
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
@@ -53,9 +53,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _loadTodayAttendance() async {
     final result = await _absenService.getAbsenToday();
-    if (result['success']) {
       setState(() => _todayAttendance = result);
-    }
   }
 
   Future<void> _loadAttendanceHistory() async {
@@ -63,6 +61,15 @@ class _DashboardPageState extends State<DashboardPage> {
     if (result['success']) {
       setState(() => _attendanceStats = result['data']);
     }
+  }
+
+  void _navigateToLeaveForm() {
+     Navigator.push(context, MaterialPageRoute(builder: (context) => LeaveFormPage()));
+  }
+
+  void _navigateToApprovalList() {
+    // TODO: Navigate to leave approval list page
+    // Navigator.push(context, MaterialPageRoute(builder: (context) => LeaveApprovalPage()));
   }
 
   @override
@@ -80,10 +87,11 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _buildQuickActions(),
+                  const SizedBox(height: 24),
                   _buildAttendanceSummary(),
                   const SizedBox(height: 24),
-                  _buildRecentActivity(),
-                  const SizedBox(height: 24),
+                  _buildApprovalSection(),
                 ],
               ),
             ),
@@ -156,18 +164,108 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  Widget _buildQuickActions() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Akses Cepat',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildQuickActionButton(
+                'Izin/Cuti',
+                Icons.edit_document,
+                const Color(0xFF42A5F5),
+                _navigateToLeaveForm,
+              ),
+              _buildQuickActionButton(
+                'Persetujuan',
+                Icons.approval,
+                const Color(0xFF66BB6A),
+                _navigateToApprovalList,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButton(
+      String title,
+      IconData icon,
+      Color color,
+      VoidCallback onTap,
+      ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 90,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildAttendanceSummary() {
-    // Use real attendance stats from API
+    // Use real attendance stats from API with updated categories
     final stats = _attendanceStats?['summary'] ?? {
       'hadir': 0,
       'izin': 0,
-      'alpha': 0,
+      'cuti': 0,
+      'dinas': 0,
     };
 
     final List<Map<String, dynamic>> statsList = [
       {'title': 'Hadir', 'value': stats['hadir'].toString(), 'color': const Color(0xFF4CAF50)},
       {'title': 'Izin', 'value': stats['izin'].toString(), 'color': const Color(0xFFFFA726)},
-      {'title': 'Alpha', 'value': stats['alpha'].toString(), 'color': const Color(0xFFE57373)},
+      {'title': 'Cuti', 'value': stats['cuti'].toString(), 'color': const Color(0xFF9575CD)},
+      {'title': 'Dinas', 'value': stats['dinas'].toString(), 'color': const Color(0xFF4FC3F7)},
     ];
 
     return Container(
@@ -208,8 +306,13 @@ class _DashboardPageState extends State<DashboardPage> {
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            childAspectRatio: 2.5,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            physics: const NeverScrollableScrollPhysics(),
             children: statsList
                 .map((stat) => _buildStatBox(
               stat['title'],
@@ -223,11 +326,68 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildRecentActivity() {
-    final checkIn = _todayAttendance?['data']?['masuk'];
-    final checkOut = _todayAttendance?['data']?['keluar'];
-
+  Widget _buildStatBox(String title, String value, Color color) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[800],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApprovalSection() {
+    // Mock data for pending approvals - replace with actual API data
+    final List<Map<String, dynamic>> pendingApprovals = [
+      {
+        'name': 'Ahmad Rizky',
+        'type': 'Izin',
+        'date': '24 Feb 2025',
+        'status': 'Menunggu',
+      },
+      {
+        'name': 'Dewi Putri',
+        'type': 'Cuti',
+        'date': '25 Feb - 28 Feb 2025',
+        'status': 'Menunggu',
+      },
+    ];
+
+    return pendingApprovals.isEmpty
+        ? const SizedBox.shrink()
+        : Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: surfaceColor,
@@ -241,92 +401,63 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Aktivitas Terakhir',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Persetujuan Izin',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _navigateToApprovalList,
+                icon: const Icon(Icons.arrow_forward, size: 18),
+                label: const Text('Semua'),
+                style: TextButton.styleFrom(
+                  foregroundColor: primaryColor,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          if (checkIn != null) ...[
-            _buildActivityItem(
-              'Check-in',
-              DateFormat('HH:mm').format(DateTime.parse(checkIn['created_at'])),
-              checkIn['status'] ?? 'Tepat Waktu',
-              Icons.login_rounded,
-              _getStatusColor(checkIn['status']),
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (checkOut != null)
-            _buildActivityItem(
-              'Check-out',
-              DateFormat('HH:mm').format(DateTime.parse(checkOut['created_at'])),
-              checkOut['status'] ?? 'Tepat Waktu',
-              Icons.logout_rounded,
-              _getStatusColor(checkOut['status']),
-            ),
+          ...pendingApprovals.map((approval) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildApprovalItem(approval),
+          )),
         ],
       ),
     );
   }
 
-  Color _getStatusColor(String? status) {
-    switch (status?.toLowerCase()) {
-      case 'terlambat':
-        return const Color(0xFFFFA726);
-      case 'tepat waktu':
-        return const Color(0xFF4CAF50);
+  Widget _buildApprovalItem(Map<String, dynamic> approval) {
+    Color typeColor;
+    IconData typeIcon;
+
+    switch (approval['type']) {
+      case 'Izin':
+        typeColor = const Color(0xFFFFA726);
+        typeIcon = Icons.event_busy;
+        break;
+      case 'Cuti':
+        typeColor = const Color(0xFF9575CD);
+        typeIcon = Icons.beach_access;
+        break;
+      case 'Dinas':
+        typeColor = const Color(0xFF4FC3F7);
+        typeIcon = Icons.business_center;
+        break;
       default:
-        return const Color(0xFF4CAF50);
+        typeColor = const Color(0xFF9E9E9E);
+        typeIcon = Icons.event_note;
     }
-  }
 
-  Widget _buildStatBox(String title, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActivityItem(
-      String title,
-      String time,
-      String status,
-      IconData icon,
-      Color color,
-      ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        border: Border.all(color: Colors.grey.shade200),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -334,10 +465,10 @@ class _DashboardPageState extends State<DashboardPage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: typeColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(typeIcon, color: typeColor, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -345,14 +476,15 @@ class _DashboardPageState extends State<DashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  approval['name'],
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  time,
+                  '${approval['type']} - ${approval['date']}',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 14,
@@ -361,20 +493,21 @@ class _DashboardPageState extends State<DashboardPage> {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              status,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.check_circle_outline, color: Color(0xFF4CAF50)),
+                onPressed: () {
+                  // TODO: Implement approval action
+                },
               ),
-            ),
+              IconButton(
+                icon: const Icon(Icons.cancel_outlined, color: Color(0xFFE57373)),
+                onPressed: () {
+                  // TODO: Implement rejection action
+                },
+              ),
+            ],
           ),
         ],
       ),
