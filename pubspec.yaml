@@ -47,6 +47,12 @@ dependencies:
   flutter_animated_dialog: ^2.0.1
   auto_size_text: ^3.0.0
   salomon_bottom_bar: ^3.3.2
+  provider: ^6.1.2
+  fl_chart: ^0.70.2
+  percent_indicator: ^4.2.4
+  shimmer: ^3.0.0
+  detect_fake_location: ^2.1.0
+  safe_device: ^1.2.0
 
   
 dev_dependencies:

@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:absensi_app/views/login/login_page.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:absensi_app/utils/device_utils.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import './views/home_page.dart';
 
-void main() async {
+import 'package:absensi_app/utils/device_utils.dart';
+import 'package:absensi_app/screens/login/login_page.dart';
+import 'package:absensi_app/screens/home_page.dart';
+import 'package:absensi_app/providers/auth_provider.dart';
+import 'package:absensi_app/providers/attendance_provider.dart';
+import 'package:absensi_app/providers/office_provider.dart';
+
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SharedPreferences prefs = await SharedPreferences.getInstance();
   await initializeDateFormatting('id_ID', null);
@@ -22,21 +28,24 @@ void main() async {
   runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
-
 class MyApp extends StatelessWidget {
   final bool isLoggedIn;
   const MyApp({super.key, required this.isLoggedIn});
 
-
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Aplikasi Absensi',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: isLoggedIn ? const HomePage() : const LoginPage(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
+        ChangeNotifierProvider(create: (_) => OfficeProvider()),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Aplikasi Absensi',
+        theme: ThemeData(primarySwatch: Colors.blue),
+        home: isLoggedIn ? const HomePage() : const LoginPage(),
+      ),
     );
   }
 }
-
-

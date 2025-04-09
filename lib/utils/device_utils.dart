@@ -1,17 +1,42 @@
 import 'package:device_info_plus/device_info_plus.dart';
-import 'dart:io';
 
 class DeviceUtils {
-  static Future<String> getDeviceId() async {
-    final DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+  static final DeviceInfoPlugin _deviceInfoPlugin = DeviceInfoPlugin();
 
-    if (Platform.isAndroid) {
-      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      return androidInfo.id; // Device ID untuk Android
-    } else if (Platform.isIOS) {
-      IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-      return iosInfo.identifierForVendor ?? "Unknown"; // Device ID untuk iOS
+  static Future<String> getDeviceId() async {
+    final deviceInfo = await _deviceInfoPlugin.deviceInfo;
+    final allInfo = deviceInfo.data;
+
+    if (allInfo.containsKey('identifierForVendor')) {
+      return allInfo['identifierForVendor'];
+    } else if (allInfo.containsKey('androidId')) {
+      return allInfo['androidId'];
+    } else {
+      return 'Unknown Device ID';
     }
-    return "Unknown Device";
+  }
+
+  static Future<String> getDeviceModel() async {
+    final deviceInfo = await _deviceInfoPlugin.deviceInfo;
+    final allInfo = deviceInfo.data;
+
+    if (allInfo.containsKey('model')) {
+      return allInfo['model'];
+    } else {
+      return 'Unknown Device Model';
+    }
+  }
+
+  static Future<String> getOSVersion() async {
+    final deviceInfo = await _deviceInfoPlugin.deviceInfo;
+    final allInfo = deviceInfo.data;
+
+    if (allInfo.containsKey('systemVersion')) {
+      return allInfo['systemVersion'];
+    } else if (allInfo.containsKey('version.release')) {
+      return allInfo['version.release'];
+    } else {
+      return 'Unknown OS Version';
+    }
   }
 }
