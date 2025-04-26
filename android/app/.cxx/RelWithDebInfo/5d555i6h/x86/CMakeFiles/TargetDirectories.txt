@@ -1,0 +1,2 @@
+C:/Users/noppa/StudioProjects/geo-attendance-app/android/app/.cxx/RelWithDebInfo/5d555i6h/x86/CMakeFiles/edit_cache.dir
+C:/Users/noppa/StudioProjects/geo-attendance-app/android/app/.cxx/RelWithDebInfo/5d555i6h/x86/CMakeFiles/rebuild_cache.dir
