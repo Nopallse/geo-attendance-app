@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:grouped_list/grouped_list.dart';
 import 'create_leave_form_page.dart';
 
 class LeaveFormPage extends StatefulWidget {
@@ -15,9 +16,9 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
   final Color backgroundColor = const Color(0xFFF5F9FF);
   final Color surfaceColor = Colors.white;
 
-  // Selected month for filtering
-  String? _selectedMonth;
-  List<String> _monthOptions = [];
+  // Selected year for filtering
+  String? _selectedYear;
+  List<String> _yearOptions = [];
 
   // Mock data for leave requests
   List<Map<String, dynamic>> _leaveRequests = [];
@@ -26,25 +27,24 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
   @override
   void initState() {
     super.initState();
-    _generateMonthOptions();
+    _generateYearOptions();
     _generateMockData();
-    _filteredLeaveRequests = List.from(_leaveRequests);
+    _filterLeaveRequests(_selectedYear);
   }
 
-  void _generateMonthOptions() {
+  void _generateYearOptions() {
     final DateTime now = DateTime.now();
     final List<String> options = [];
 
-    // Generate 12 months starting from 11 months ago
-    for (int i = -11; i <= 0; i++) {
-      final DateTime month = DateTime(now.year, now.month + i, 1);
-      final String formattedMonth = DateFormat('MMMM yyyy').format(month);
-      options.add(formattedMonth);
+    // Generate years (current and two previous years)
+    for (int i = -2; i <= 0; i++) {
+      final int year = now.year + i;
+      options.add(year.toString());
     }
 
     setState(() {
-      _monthOptions = options;
-      _selectedMonth = DateFormat('MMMM yyyy').format(now); // Default to current month
+      _yearOptions = options;
+      _selectedYear = now.year.toString(); // Default to current year
     });
   }
 
@@ -53,98 +53,140 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
       {
         'id': '1',
         'type': 'Izin',
+        'leaveType': 'jam',
         'description': 'Urusan keluarga',
-        'date': '24 Feb 2025',
+        'start_date': DateTime(2025, 2, 24),
+        'end_date': DateTime(2025, 2, 24),
+        'start_time': '09:00',
+        'end_time': '12:00',
         'status': 'Menunggu',
-        'month': 'February 2025',
       },
       {
         'id': '2',
         'type': 'Cuti',
+        'leaveType': 'hari',
         'description': 'Cuti tahunan',
-        'date': '10 Jan - 12 Jan 2025',
+        'start_date': DateTime(2025, 1, 10),
+        'end_date': DateTime(2025, 1, 12),
         'status': 'Disetujui',
-        'month': 'January 2025',
       },
       {
         'id': '3',
         'type': 'Sakit',
+        'leaveType': 'hari',
         'description': 'Demam',
-        'date': '05 Dec 2024',
+        'start_date': DateTime(2024, 12, 5),
+        'end_date': DateTime(2024, 12, 5),
         'status': 'Disetujui',
-        'month': 'December 2024',
       },
       {
         'id': '4',
         'type': 'Izin',
+        'leaveType': 'jam',
         'description': 'Acara keluarga',
-        'date': '15 Nov 2024',
+        'start_date': DateTime(2024, 11, 15),
+        'end_date': DateTime(2024, 11, 15),
+        'start_time': '13:00',
+        'end_time': '17:00',
         'status': 'Ditolak',
-        'month': 'November 2024',
       },
       {
         'id': '5',
         'type': 'Cuti',
+        'leaveType': 'hari',
         'description': 'Liburan',
-        'date': '20 Oct - 25 Oct 2024',
+        'start_date': DateTime(2024, 10, 20),
+        'end_date': DateTime(2024, 10, 25),
         'status': 'Disetujui',
-        'month': 'October 2024',
       },
       {
         'id': '6',
         'type': 'Sakit',
+        'leaveType': 'jam',
         'description': 'Checkup rutin',
-        'date': '08 Sep 2024',
+        'start_date': DateTime(2024, 9, 8),
+        'end_date': DateTime(2024, 9, 8),
+        'start_time': '10:00',
+        'end_time': '12:30',
         'status': 'Disetujui',
-        'month': 'September 2024',
       },
       {
         'id': '7',
         'type': 'Izin',
+        'leaveType': 'hari',
         'description': 'Menghadiri seminar',
-        'date': '17 Aug 2024',
+        'start_date': DateTime(2024, 8, 17),
+        'end_date': DateTime(2024, 8, 17),
         'status': 'Menunggu',
-        'month': 'August 2024',
       },
       {
         'id': '8',
         'type': 'Cuti',
+        'leaveType': 'hari',
         'description': 'Cuti bersama',
-        'date': '01 Jul - 03 Jul 2024',
+        'start_date': DateTime(2024, 7, 1),
+        'end_date': DateTime(2024, 7, 3),
         'status': 'Disetujui',
-        'month': 'July 2024',
       },
       {
         'id': '9',
         'type': 'Sakit',
+        'leaveType': 'jam',
         'description': 'Sakit gigi',
-        'date': '22 Jun 2024',
+        'start_date': DateTime(2024, 6, 22),
+        'end_date': DateTime(2024, 6, 22),
+        'start_time': '08:00',
+        'end_time': '11:00',
         'status': 'Disetujui',
-        'month': 'June 2024',
       },
       {
         'id': '10',
         'type': 'Izin',
+        'leaveType': 'jam',
         'description': 'Mengurus dokumen',
-        'date': '12 May 2024',
+        'start_date': DateTime(2024, 5, 12),
+        'end_date': DateTime(2024, 5, 12),
+        'start_time': '14:00',
+        'end_time': '16:00',
         'status': 'Ditolak',
-        'month': 'May 2024',
       },
       {
         'id': '11',
         'type': 'Cuti',
+        'leaveType': 'hari',
         'description': 'Liburan keluarga',
-        'date': '15 Apr - 20 Apr 2024',
+        'start_date': DateTime(2024, 4, 15),
+        'end_date': DateTime(2024, 4, 20),
         'status': 'Disetujui',
-        'month': 'April 2024',
       },
       {
         'id': '12',
         'type': 'Sakit',
+        'leaveType': 'hari',
         'description': 'Flu',
-        'date': '28 Mar 2024',
+        'start_date': DateTime(2024, 3, 28),
+        'end_date': DateTime(2024, 3, 28),
         'status': 'Disetujui',
-        'month': 'March 2024',
+      },
+      {
+        'id': '13',
+        'type': 'Izin',
+        'leaveType': 'jam',
+        'description': 'Pengurusan SIM',
+        'start_date': DateTime(2023, 12, 5),
+        'end_date': DateTime(2023, 12, 5),
+        'start_time': '09:00',
+        'end_time': '11:30',
+        'status': 'Disetujui',
+      },
+      {
+        'id': '14',
+        'type': 'Cuti',
+        'leaveType': 'hari',
+        'description': 'Cuti akhir tahun',
+        'start_date': DateTime(2023, 12, 27),
+        'end_date': DateTime(2023, 12, 30),
+        'status': 'Disetujui',
       },
     ];
 
@@ -153,15 +195,19 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
     });
   }
 
-  void _filterLeaveRequests(String? month) {
-    if (month == null) {
+  void _filterLeaveRequests(String? year) {
+    if (year == null) {
       setState(() {
         _filteredLeaveRequests = List.from(_leaveRequests);
       });
       return;
     }
 
-    final filtered = _leaveRequests.where((request) => request['month'] == month).toList();
+    final filtered = _leaveRequests.where((request) {
+      final startDate = request['start_date'] as DateTime;
+      return startDate.year.toString() == year;
+    }).toList();
+
     setState(() {
       _filteredLeaveRequests = filtered;
     });
@@ -171,69 +217,99 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
     Navigator.push(context, MaterialPageRoute(builder: (context) => CreateLeaveFormPage()));
   }
 
+  String _getDateRangeText(DateTime startDate, DateTime endDate) {
+    final formatter = DateFormat('d MMM');
+    final yearFormatter = DateFormat('yyyy');
+
+    if (startDate.isAtSameMomentAs(endDate)) {
+      return formatter.format(startDate) + ' ' + yearFormatter.format(startDate);
+    } else if (startDate.month == endDate.month && startDate.year == endDate.year) {
+      return '${DateFormat('d').format(startDate)} - ${formatter.format(endDate)} ${yearFormatter.format(endDate)}';
+    } else {
+      return '${formatter.format(startDate)} - ${formatter.format(endDate)} ${yearFormatter.format(endDate)}';
+    }
+  }
+
+  String _getGroupMonth(DateTime date) {
+    return DateFormat('MMMM yyyy').format(date);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text('Form Izin'),
+        title: const Text(
+          'Riwayat Cuti & Izin',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: primaryColor,
         elevation: 0,
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreateLeaveForm,
         backgroundColor: primaryColor,
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Ajukan Izin'),
+        elevation: 4,
       ),
       body: Column(
         children: [
-          _buildFilter(),
+          _buildYearFilter(),
           Expanded(
             child: _filteredLeaveRequests.isEmpty
                 ? _buildEmptyState()
-                : _buildLeaveList(),
+                : _buildGroupedLeaveList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilter() {
+  Widget _buildYearFilter() {
     return Container(
-      padding: const EdgeInsets.all(16),
       color: surfaceColor,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
         children: [
-          const Text(
-            'Filter Bulan:',
+          Text(
+            'Pilih Tahun: ',
             style: TextStyle(
-              fontSize: 16,
               fontWeight: FontWeight.w500,
+              fontSize: 15,
+              color: Colors.grey.shade800,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.grey.shade300),
+                color: surfaceColor,
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
-                  value: _selectedMonth,
-                  hint: const Text('Pilih Bulan'),
+                  value: _selectedYear,
                   isExpanded: true,
                   icon: const Icon(Icons.keyboard_arrow_down),
-                  items: _monthOptions.map((String month) {
+                  style: TextStyle(
+                    color: Colors.grey.shade800,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  items: _yearOptions.map<DropdownMenuItem<String>>((String year) {
                     return DropdownMenuItem<String>(
-                      value: month,
-                      child: Text(month),
+                      value: year,
+                      child: Text(year),
                     );
                   }).toList(),
                   onChanged: (String? newValue) {
                     setState(() {
-                      _selectedMonth = newValue;
+                      _selectedYear = newValue;
                     });
                     _filterLeaveRequests(newValue);
                   },
@@ -253,30 +329,85 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
         children: [
           Icon(
             Icons.event_busy,
-            size: 80,
-            color: Colors.grey.shade400,
+            size: 100,
+            color: Colors.grey.shade300,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Text(
-            'Tidak ada data izin pada bulan ini',
+            'Tidak ada riwayat izin untuk tahun $_selectedYear',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
               color: Colors.grey.shade600,
             ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Klik tombol "+ Ajukan Izin" untuk membuat permohonan baru',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLeaveList() {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _filteredLeaveRequests.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final request = _filteredLeaveRequests[index];
-        return _buildLeaveItem(request);
+  Widget _buildGroupedLeaveList() {
+    return GroupedListView<Map<String, dynamic>, String>(
+      elements: _filteredLeaveRequests,
+      groupBy: (element) => _getGroupMonth(element['start_date']),
+      groupComparator: (value1, value2) {
+        // Sort groups in reverse chronological order (newest first)
+        final date1 = DateFormat('MMMM yyyy').parse(value1);
+        final date2 = DateFormat('MMMM yyyy').parse(value2);
+        return date2.compareTo(date1);
+      },
+      itemComparator: (item1, item2) {
+        // Sort items in reverse chronological order (newest first)
+        return item2['start_date'].compareTo(item1['start_date']);
+      },
+      order: GroupedListOrder.ASC,
+      useStickyGroupSeparators: true,
+      groupSeparatorBuilder: (String value) => Padding(
+        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 8.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+              decoration: BoxDecoration(
+                color: secondaryColor.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                value,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Divider(
+                  color: Colors.grey.shade300,
+                  thickness: 1.0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      padding: const EdgeInsets.only(bottom: 80), // Extra padding for FAB
+      itemBuilder: (context, element) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+          child: _buildLeaveItem(element),
+        );
       },
     );
   }
@@ -285,6 +416,12 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
     Color statusColor;
     Color typeColor;
     IconData typeIcon;
+    final bool isHourlyLeave = leave['leaveType'] == 'jam';
+
+    final dateRange = _getDateRangeText(
+      leave['start_date'],
+      leave['end_date'],
+    );
 
     // Set status color
     switch (leave['status']) {
@@ -315,88 +452,156 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
         typeIcon = Icons.event_busy;
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: Colors.grey.shade100,
+          width: 1,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: InkWell(
+        onTap: () {
+          // View detail - could be implemented in the future
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: typeColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(typeIcon, color: typeColor, size: 22),
+                    child: Icon(typeIcon, color: typeColor, size: 24),
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    leave['type'],
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              leave['type'],
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isHourlyLeave
+                                    ? const Color(0xFF64B5F6).withOpacity(0.1)
+                                    : const Color(0xFF81C784).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                isHourlyLeave ? 'Jam' : 'Hari',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: isHourlyLeave
+                                      ? const Color(0xFF1976D2)
+                                      : const Color(0xFF388E3C),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          leave['description'],
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  leave['status'],
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: statusColor,
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.event,
+                            size: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            dateRange,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (isHourlyLeave) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${leave['start_time']} - ${leave['end_time']}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
-                ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: statusColor.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      leave['status'],
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            leave['description'],
-            style: const TextStyle(
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                Icons.calendar_today,
-                size: 16,
-                color: Colors.grey.shade600,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                leave['date'],
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

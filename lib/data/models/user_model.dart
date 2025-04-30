@@ -6,6 +6,9 @@ class User {
   final String? photoUrl;
   final String deviceId;
   final DateTime? createdAt;
+  final String? position;
+  final String? department;
+  final String? phone;
 
   User({
     required this.id,
@@ -15,19 +18,26 @@ class User {
     this.photoUrl,
     required this.deviceId,
     this.createdAt,
+    this.position,
+    this.department,
+    this.phone,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] ?? 0, // Default ke 0 jika null
-      name: json['name'] ?? 'Unknown', // Default jika null
+      id: json['id'] ?? 0,
+      name: json['name'] ?? 'Unknown',
       email: json['email'] ?? '',
-      role: json['role'] ?? 'user', // Default jika role tidak ada
-      photoUrl: json['photo_url'] != null ? json['photo_url'].toString() : null, // Pastikan null tetap null
+      role: json['role'] ?? 'user',
+      photoUrl: json['photo_url'] != null ? json['photo_url'].toString() : null,
       deviceId: json['device_id'] ?? '',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
-          : null, // Gunakan tryParse agar aman
+          : null,
+      position: json['position'],
+      department: json['department'],
+      phone: json['phone'],
+
     );
   }
 
@@ -40,6 +50,9 @@ class User {
       'photo_url': photoUrl,
       'device_id': deviceId,
       'created_at': createdAt?.toIso8601String(),
+      'position': position,
+      'department': department,
+      'phone': phone,
     };
   }
 }

@@ -1,10 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../data/api/services/attendance_service.dart';
 import '../data/models/attendance_model.dart';
+import '../data/repositories/attendance_repository.dart';
 
 class AttendanceProvider with ChangeNotifier {
-  final AttendanceService _attendanceService = AttendanceService();
+  final AttendanceRepository _attendanceRepository;
+
+  // Dependency injection through constructor
+  AttendanceProvider({required AttendanceRepository attendanceRepository})
+      : _attendanceRepository = attendanceRepository;
 
   Attendance? _todayAttendance;
   List<Attendance> _attendanceHistory = [];
@@ -26,7 +30,7 @@ class AttendanceProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _attendanceService.createAttendance(
+      final result = await _attendanceRepository.createAttendance(
         isCheckIn,
         position.latitude,
         position.longitude,
@@ -60,14 +64,12 @@ class AttendanceProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _attendanceService.getTodayAttendance();
+      final result = await _attendanceRepository.getTodayAttendance();
 
       if (result['success']) {
-        //LOG
         if (result['data'] != null) {
           debugPrint('API Response: $result');
           _todayAttendance = Attendance.fromJson(result['data']['data']);
-          //LOG
           debugPrint('Today Attendance: $_todayAttendance');
         } else {
           _todayAttendance = null;
@@ -98,7 +100,7 @@ class AttendanceProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _attendanceService.getAttendanceHistory(
+      final result = await _attendanceRepository.getAttendanceHistory(
         page: _currentPage,
         limit: 10,
       );

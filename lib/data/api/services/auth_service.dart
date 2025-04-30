@@ -1,6 +1,7 @@
+import 'dart:convert';
 import '../../api/api_service.dart';
 import '../../api/endpoints.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../../utils/shared_prefs_utils.dart';
 
 class AuthService {
   final ApiService _apiService = ApiService();
@@ -15,8 +16,12 @@ class AuthService {
 
       if (response['success']) {
         // Save token to SharedPreferences on successful login
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString("token", response['data']["token"]);
+        await SharedPrefsUtils.saveToken(response['data']["token"]);
+
+        // If user profile data is included in the response, save it too
+        if (response['data']["user"] != null) {
+          await SharedPrefsUtils.saveUserData(jsonEncode(response['data']["user"]));
+        }
       }
 
       return response;
@@ -27,7 +32,21 @@ class AuthService {
 
   Future<Map<String, dynamic>> getUserProfile() async {
     try {
-      return await _apiService.get(ApiEndpoints.userProfile);
+      // First try to get from SharedPreferences
+      String? userData = await SharedPrefsUtils.getUserData();
+      if (userData != null) {
+        return {"success": true, "data": jsonDecode(userData)};
+      }
+
+      // If not available, fetch from API
+      final response = await _apiService.get(ApiEndpoints.userProfile);
+
+      // If successful, save to SharedPreferences for future use
+      if (response['success'] && response['data'] != null) {
+        await SharedPrefsUtils.saveUserData(jsonEncode(response['data']));
+      }
+
+      return response;
     } catch (e) {
       return {"success": false, "message": "Failed to get user profile: $e"};
     }
@@ -35,8 +54,8 @@ class AuthService {
 
   Future<void> logout() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.remove("token");
+      // Clear all user-related data but keep device ID
+      await SharedPrefsUtils.clearAllData();
     } catch (e) {
       throw Exception("Logout failed: $e");
     }
@@ -44,8 +63,7 @@ class AuthService {
 
   Future<bool> isLoggedIn() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      return prefs.getString("token") != null;
+      return await SharedPrefsUtils.isLoggedIn();
     } catch (e) {
       return false;
     }

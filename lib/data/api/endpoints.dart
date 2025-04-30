@@ -1,6 +1,6 @@
 class ApiEndpoints {
   // Base URL
-  static const String baseUrl = "https://polite-helping-moray.ngrok-free.app";
+  static const String baseUrl = "https://probable-grouse-firstly.ngrok-free.app";
 
   // Auth endpoints
   static const String login = "/auth/login";

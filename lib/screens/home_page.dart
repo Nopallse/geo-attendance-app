@@ -5,8 +5,6 @@ import 'package:absensi_app/screens/dashboard/dashboard_page.dart';
 import 'package:absensi_app/screens/profile/profile_page.dart';
 import 'package:absensi_app/screens/riwayat/riwayat_page.dart';
 import 'package:absensi_app/screens/notification/notification_page.dart';
-import 'package:absensi_app/screens/absensi/absensi_page.dart';
-import 'package:absensi_app/screens/dashboard/dashboard_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,38 +14,30 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
-  final List<IconData> _iconList = [
+  int _bottomNavIndex = 0;
+  final List<IconData> iconList = [
     Icons.home_rounded,
     Icons.history_rounded,
-    Icons.notifications_rounded, // New icon for notifications
+    Icons.notifications_rounded,
     Icons.person_rounded,
   ];
 
-  // Updated to include 5 pages (with AbsensiPage accessed via FAB)
+  // Pages for each tab
   static const List<Widget> _pages = <Widget>[
     DashboardPage(),
     RiwayatPage(),
-    NotificationPage(), // New page
+    NotificationPage(),
     ProfilePage(),
   ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: _pages[_bottomNavIndex],
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.blue,
-
         elevation: 8,
         shape: const CircleBorder(),
-
         child: const Icon(
           Icons.location_on_rounded,
           color: Colors.white,
@@ -62,20 +52,23 @@ class _HomePageState extends State<HomePage> {
         },
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: AnimatedBottomNavigationBar(
-        icons: _iconList,
-        activeIndex: _selectedIndex,
+      bottomNavigationBar: AnimatedBottomNavigationBar.builder(
+        itemCount: iconList.length,
+        tabBuilder: (int index, bool isActive) {
+          return Icon(
+            iconList[index],
+            size: 24,
+            color: isActive ? Colors.blue : Colors.grey,
+          );
+        },
+        activeIndex: _bottomNavIndex,
         gapLocation: GapLocation.center,
         notchSmoothness: NotchSmoothness.smoothEdge,
-        onTap: _onItemTapped,
-        activeColor: Colors.blue,
-        inactiveColor: Colors.grey,
-        backgroundColor: Colors.white,
-        elevation: 12,
-        // Custom styling
         leftCornerRadius: 32,
         rightCornerRadius: 32,
-        iconSize: 24,
+        onTap: (index) => setState(() => _bottomNavIndex = index),
+        backgroundColor: Colors.white,
+        elevation: 12,
         shadow: const BoxShadow(
           offset: Offset(0, 1),
           blurRadius: 12,

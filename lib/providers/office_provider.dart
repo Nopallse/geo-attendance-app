@@ -1,9 +1,13 @@
 import 'package:flutter/foundation.dart';
-import '../data/api/services/office_service.dart';
 import '../data/models/office_model.dart';
+import '../data/repositories/office_repository.dart';
 
 class OfficeProvider with ChangeNotifier {
-  final OfficeService _officeService = OfficeService();
+  final OfficeRepository _officeRepository;
+
+  // Dependency injection through constructor
+  OfficeProvider({required OfficeRepository officeRepository})
+      : _officeRepository = officeRepository;
 
   List<Office> _offices = [];
   bool _isLoading = false;
@@ -20,7 +24,7 @@ class OfficeProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _officeService.getOffices();
+      final result = await _officeRepository.getOffices();
 
       if (result['success']) {
         final List<dynamic> data = result['data']['data'];

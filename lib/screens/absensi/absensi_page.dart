@@ -176,6 +176,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
       if (distance <= office.radius) {
         return true;
       }
+
     }
     return false;
   }

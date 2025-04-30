@@ -17,21 +17,29 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
   final logger = Logger();
+  String? _deviceId;
 
   // Define theme colors
   final Color primaryColor = const Color(0xFF64B5F6); // Light Blue
   final Color secondaryColor = const Color(0xFF90CAF9); // Lighter Blue
   final Color backgroundColor = const Color(0xFFF5F9FF); // Very Light Blue
 
-  void _printDeviceId() async {
-    String deviceId = await DeviceUtils.getDeviceId();
-    logger.d("Device ID: $deviceId");
+  void _getDeviceId() async {
+    try {
+      String deviceId = await DeviceUtils.getDeviceId();
+      setState(() {
+        _deviceId = deviceId;
+      });
+      logger.d("Device ID on login page: $deviceId");
+    } catch (e) {
+      logger.e("Error getting device ID: $e");
+    }
   }
 
   @override
   void initState() {
     super.initState();
-    _printDeviceId();
+    _getDeviceId();
   }
 
   void _handleLogin() async {
@@ -123,6 +131,18 @@ class _LoginPageState extends State<LoginPage> {
                           color: Colors.white.withOpacity(0.9),
                         ),
                       ),
+                      // Show device ID in debug mode
+                      if (_deviceId != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            "Device ID: ${_deviceId!.substring(0, 8)}...",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.white.withOpacity(0.7),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

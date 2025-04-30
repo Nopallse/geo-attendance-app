@@ -1,9 +1,14 @@
 import 'package:flutter/foundation.dart';
-import '../data/api/services/auth_service.dart';
 import '../data/models/user_model.dart';
+import '../data/repositories/auth_repository.dart';
 
 class AuthProvider with ChangeNotifier {
-  final AuthService _authService = AuthService();
+  final AuthRepository _authRepository;
+
+  // Dependency injection through constructor
+  AuthProvider({required AuthRepository authRepository})
+      : _authRepository = authRepository;
+
   User? _user;
   bool _isLoading = false;
   String? _errorMessage;
@@ -19,7 +24,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      bool loggedIn = await _authService.isLoggedIn();
+      bool loggedIn = await _authRepository.isLoggedIn();
       if (loggedIn) {
         await getUserProfile();
       }
@@ -38,7 +43,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _authService.login(email, password);
+      final result = await _authRepository.login(email, password);
 
       if (result['success']) {
         await getUserProfile();
@@ -59,7 +64,7 @@ class AuthProvider with ChangeNotifier {
   // Get user profile
   Future<void> getUserProfile() async {
     try {
-      final result = await _authService.getUserProfile();
+      final result = await _authRepository.getUserProfile();
 
       if (result['success']) {
         _user = User.fromJson(result['data']);
@@ -78,7 +83,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.logout();
+      await _authRepository.logout();
       _user = null;
     } catch (e) {
       _errorMessage = e.toString();

@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 import './endpoints.dart';
+import 'package:absensi_app/utils/device_utils.dart';
+import 'package:absensi_app/utils/shared_prefs_utils.dart';
 
 class ApiService {
   final String baseUrl = ApiEndpoints.baseUrl;
@@ -10,8 +12,10 @@ class ApiService {
 
   // Get auth headers with token and device ID
   Future<Map<String, String>> _getHeaders({bool requiresAuth = true, bool isJson = true}) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? deviceId = prefs.getString("deviceId") ?? "";
+    // Get device ID from SharedPrefs via DeviceUtils
+    String deviceId = await DeviceUtils.getDeviceId();
+    logger.d("Device ID used in request: $deviceId");
+
     Map<String, String> headers = {
       "Device_Id": deviceId,
     };
@@ -21,7 +25,7 @@ class ApiService {
     }
 
     if (requiresAuth) {
-      String? token = prefs.getString("token");
+      String? token = await SharedPrefsUtils.getToken();
       if (token == null) {
         throw Exception("Authentication required but token not found");
       }
