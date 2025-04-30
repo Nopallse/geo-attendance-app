@@ -91,12 +91,10 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
       },
     );
 
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
+    setState(() {
+      _selectedDate = picked;
+    });
     }
-  }
 
   void _pickTime(bool isStart) async {
     TimeOfDay initialTime = isStart

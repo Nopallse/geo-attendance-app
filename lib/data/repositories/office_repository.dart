@@ -1,4 +1,3 @@
-import '../models/office_model.dart';
 import '../api/services/office_service.dart';
 
 abstract class OfficeRepository {

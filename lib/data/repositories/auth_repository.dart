@@ -1,4 +1,3 @@
-import '../models/user_model.dart';
 import '../api/services/auth_service.dart';
 
 abstract class AuthRepository {

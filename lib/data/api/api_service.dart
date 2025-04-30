@@ -26,9 +26,6 @@ class ApiService {
 
     if (requiresAuth) {
       String? token = await SharedPrefsUtils.getToken();
-      if (token == null) {
-        throw Exception("Authentication required but token not found");
-      }
       headers["Authorization"] = "Bearer $token";
     }
 

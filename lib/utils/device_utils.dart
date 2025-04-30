@@ -50,6 +50,7 @@ class DeviceUtils {
         return '${deviceInfo.id}_${deviceInfo.model}_${deviceInfo.brand}';
       } else if (deviceInfo is IosDeviceInfo) {
         // For iOS, use identifierForVendor if available
+        _logger.d('Generated device ID from device info iphone: ${deviceInfo.identifierForVendor}');
         return deviceInfo.identifierForVendor;
       }
     } catch (e) {

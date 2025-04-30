@@ -67,10 +67,8 @@ class SharedPrefsUtils {
     await prefs.clear();
 
     // If device ID existed, restore it
-    if (deviceId != null) {
-      await prefs.setString(deviceIdKey, deviceId);
-    }
-
+    await prefs.setString(deviceIdKey, deviceId!);
+  
     return true;
   }
 }
