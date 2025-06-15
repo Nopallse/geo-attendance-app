@@ -14,56 +14,37 @@ class AttendanceStatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Process history to get summary counts
-    final List<Attendance> history = attendanceProvider.attendanceHistory;
-    int hadir = 0;
-    int izin = 0;
-    int cuti = 0;
-    int dinas = 0;
-
-    for (var attendance in history) {
-      // Assuming attendance has a 'status' field to distinguish types
-      String type = attendance.status?.toLowerCase() ?? 'hadir';
-      switch (type) {
-        case 'hadir':
-          hadir++;
-          break;
-        case 'izin':
-          izin++;
-          break;
-        case 'cuti':
-          cuti++;
-          break;
-        case 'dinas':
-          dinas++;
-          break;
-      }
-    }
+    // Gunakan data statistik dari API
+    final Map<String, dynamic> statistics = attendanceProvider.statistics;
+    print(statistics);
+    
+    // Hitung total hari kerja dalam bulan initotal
+    final int totalDays = statistics['total'] ?? 0;
+    
+    // Hitung jumlah hadir (termasuk dinas)
+    final int hadir = (statistics['hadir'] ?? 0) + (statistics['dinas'] ?? 0);
+    
+    // Hitung jumlah tidak hadir (izin + cuti + sakit)
+    final int tidakHadir = (statistics['izin'] ?? 0) + 
+                          (statistics['cuti'] ?? 0) + 
+                          (statistics['sakit'] ?? 0);
 
     final List<Map<String, dynamic>> statsList = [
       {
         'title': 'Hadir',
         'value': hadir,
         'color': AppColors.success,
-        'icon': Icons.check_circle_outline
+        'icon': Icons.check_circle_outline,
+        'subtitle': 'Hari',
+        'percentage': totalDays > 0 ? (hadir / totalDays * 100).round() : 0,
       },
       {
-        'title': 'Izin',
-        'value': izin,
-        'color': AppColors.warning,
-        'icon': Icons.event_note
-      },
-      {
-        'title': 'Cuti',
-        'value': cuti,
-        'color': const Color(0xFF9575CD),
-        'icon': Icons.event_busy
-      },
-      {
-        'title': 'Dinas',
-        'value': dinas,
-        'color': AppColors.info,
-        'icon': Icons.business_center
+        'title': 'Tidak Hadir',
+        'value': tidakHadir,
+        'color': AppColors.error,
+        'icon': Icons.event_busy,
+        'subtitle': 'Hari',
+        'percentage': totalDays > 0 ? (tidakHadir / totalDays * 100).round() : 0,
       },
     ];
 
@@ -85,12 +66,23 @@ class AttendanceStatsGrid extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
             Text(
               'Ringkasan Bulan Ini',
               style: AppTypography.subtitle1.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
               ),
+                ),
+                Text(
+                  'Total: $totalDays hari',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             GridView.builder(
@@ -120,6 +112,10 @@ class AttendanceStatsGrid extends StatelessWidget {
       decoration: BoxDecoration(
         color: stat['color'].withOpacity(0.08),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: stat['color'].withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,10 +123,17 @@ class AttendanceStatsGrid extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: stat['color'].withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
                 stat['icon'],
                 color: stat['color'],
-                size: 20,
+                  size: 16,
+                ),
               ),
               const SizedBox(width: 8),
               Text(
@@ -142,12 +145,39 @@ class AttendanceStatsGrid extends StatelessWidget {
               ),
             ],
           ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
           Text(
             stat['value'].toString(),
             style: AppTypography.headline3.copyWith(
               fontWeight: FontWeight.bold,
               color: stat['color'],
             ),
+                  ),
+                  const SizedBox(width: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      stat['subtitle'],
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${stat['percentage']}% dari total',
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
           ),
         ],
       ),

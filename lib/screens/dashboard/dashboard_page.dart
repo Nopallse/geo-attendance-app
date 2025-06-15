@@ -1,11 +1,12 @@
+// lib/screens/dashboard/dashboard_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/office_provider.dart';
 import '../../data/models/attendance_model.dart';
 import '../../data/models/user_model.dart';
-import '../leave/leave_form_page.dart';
 import '../../styles/colors.dart';
 import '../../widgets/widgets.dart';
 
@@ -32,17 +33,27 @@ class _DashboardPageState extends State<DashboardPage> {
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
     final officeProvider = Provider.of<OfficeProvider>(context, listen: false);
 
-    // Get user profile if not loaded
-    if (authProvider.user == null) {
-      await authProvider.getUserProfile();
-    }
+    try {
+      // Get user profile if not loaded
+      if (authProvider.user == null) {
+        await authProvider.getUserProfile();
+      }
 
-    await Future.wait([
-      authProvider.user == null ? authProvider.getUserProfile() : Future.value(null),
-      attendanceProvider.getTodayAttendance(),
-      attendanceProvider.getAttendanceHistory(refresh: true),
-      officeProvider.offices.isEmpty ? officeProvider.getOffices() : Future.value(null),
-    ]);
+      await Future.wait([
+        authProvider.user == null ? authProvider.getUserProfile() : Future.value(null),
+        attendanceProvider.getTodayAttendance(),
+        attendanceProvider.getAttendanceHistory(refresh: true),
+        officeProvider.offices.isEmpty ? officeProvider.getOffices() : Future.value(null),
+      ]);
+      
+      // Pastikan data dimuat dengan benar
+      if (attendanceProvider.attendanceHistory.isEmpty && !attendanceProvider.isLoading) {
+        // Coba muat ulang jika data kosong
+        await attendanceProvider.getAttendanceHistory(refresh: true);
+      }
+    } catch (e) {
+      debugPrint('Error loading data: $e');
+    }
   }
 
   Future<void> _refreshData() async {
@@ -58,10 +69,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _navigateToLeaveForm() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const LeaveFormPage()),
-    );
+    // Use GoRouter to navigate to leave form
+    context.push('/leave');
   }
 
   @override
@@ -99,7 +108,6 @@ class _DashboardPageState extends State<DashboardPage> {
                       isLoading: isLoading
                   ),
                   LeaveButton(onPressed: _navigateToLeaveForm),
-                  AttendanceStatsGrid(attendanceProvider: attendanceProvider),
                 ],
               ),
             ),

@@ -6,19 +6,16 @@ import '../../../utils/shared_prefs_utils.dart';
 class AuthService {
   final ApiService _apiService = ApiService();
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final response = await _apiService.post(
         ApiEndpoints.login,
-        body: {"email": email, "password": password},
+        body: {"username": username, "password": password},
         requiresAuth: false,
       );
 
       if (response['success']) {
-        // Save token to SharedPreferences on successful login
-        await SharedPrefsUtils.saveToken(response['data']["token"]);
-
-        // If user profile data is included in the response, save it too
+        // Jika user profile data disertakan dalam response, simpan
         if (response['data']["user"] != null) {
           await SharedPrefsUtils.saveUserData(jsonEncode(response['data']["user"]));
         }
@@ -32,16 +29,16 @@ class AuthService {
 
   Future<Map<String, dynamic>> getUserProfile() async {
     try {
-      // First try to get from SharedPreferences
+      // Coba ambil dari SharedPreferences
       String? userData = await SharedPrefsUtils.getUserData();
       if (userData != null) {
         return {"success": true, "data": jsonDecode(userData)};
       }
 
-      // If not available, fetch from API
+      // Jika tidak tersedia, ambil dari API
       final response = await _apiService.get(ApiEndpoints.userProfile);
 
-      // If successful, save to SharedPreferences for future use
+      // Jika berhasil, simpan ke SharedPreferences untuk penggunaan selanjutnya
       if (response['success'] && response['data'] != null) {
         await SharedPrefsUtils.saveUserData(jsonEncode(response['data']));
       }
@@ -54,13 +51,13 @@ class AuthService {
 
   Future<void> logout() async {
     try {
-      // Clear all user-related data but keep device ID
+      // Hapus semua data terkait pengguna tetapi simpan device ID
       await SharedPrefsUtils.clearAllData();
     } catch (e) {
       throw Exception("Logout failed: $e");
     }
   }
-
+  
   Future<bool> isLoggedIn() async {
     try {
       return await SharedPrefsUtils.isLoggedIn();

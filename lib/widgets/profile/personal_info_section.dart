@@ -17,7 +17,6 @@ class PersonalInfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     String employeeId = user?.deviceId ?? '-';
     String email = user?.email ?? '-';
-    String phone = user?.phone ?? '-';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,24 +52,7 @@ class PersonalInfoSection extends StatelessWidget {
                 subtitle: email,
                 showDivider: true,
               ),
-              InfoTile(
-                icon: Icons.phone_outlined,
-                title: 'Nomor Telepon',
-                subtitle: phone,
-                showDivider: true,
-              ),
-              InfoTile(
-                icon: Icons.badge_outlined,
-                title: 'ID Karyawan',
-                subtitle: employeeId,
-                showDivider: true,
-              ),
-              InfoTile(
-                icon: Icons.calendar_today_outlined,
-                title: 'Tanggal Bergabung',
-                subtitle: joinDate,
-                showDivider: false,
-              ),
+
             ],
           ),
         ),

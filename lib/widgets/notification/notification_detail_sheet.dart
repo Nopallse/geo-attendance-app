@@ -1,112 +1,128 @@
 import 'package:flutter/material.dart';
+import '../../data/models/notification_model.dart';
 import '../../styles/colors.dart';
 import '../../styles/typography.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 class NotificationDetailSheet extends StatelessWidget {
-  final Map<String, dynamic> notification;
+  final NotificationModel notification;
 
   const NotificationDetailSheet({
     Key? key,
     required this.notification,
   }) : super(key: key);
 
+  Color _getNotificationColor() {
+    switch (notification.type.toLowerCase()) {
+      case 'attendance':
+        return const Color(0xFF2196F3);
+      case 'leave':
+        return const Color(0xFFFF9800);
+      case 'office':
+        return const Color(0xFF4CAF50);
+      default:
+        return const Color(0xFF2196F3);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    bool isInfo = notification['type'] == 'info';
-
+    final color = _getNotificationColor();
+    
     return Container(
-      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
           Container(
-            margin: const EdgeInsets.only(top: 12),
             width: 40,
             height: 4,
+            margin: const EdgeInsets.only(top: 12),
             decoration: BoxDecoration(
               color: Colors.grey[300],
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(24),
+          Container(
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      width: 4,
+                      height: 24,
                       decoration: BoxDecoration(
-                        color: isInfo
-                            ? AppColors.info.withOpacity(0.1)
-                            : AppColors.success.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        isInfo ? Icons.info_outline : Icons.check_circle_outline,
-                        size: 28,
-                        color: isInfo ? AppColors.info : AppColors.success,
+                        color: color,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            notification['title'],
-                            style: AppTypography.headline6,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            notification['time'],
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        notification.title,
+                        style: AppTypography.headline6.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                // Message
-                Text(
-                  notification['message'],
-                  style: AppTypography.bodyText1.copyWith(
-                    height: 1.6,
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    notification.body,
+                    style: AppTypography.bodyText1.copyWith(
+                      height: 1.5,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 32),
-                // Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: Colors.grey[600],
                     ),
-                    child: const Text(
-                      'Tutup',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(width: 8),
+                    Text(
+                      timeago.format(notification.createdAt, locale: 'id'),
+                      style: AppTypography.bodyText2.copyWith(
+                        color: Colors.grey[600],
                       ),
                     ),
-                  ),
+                    const Spacer(),
+                    if (notification.referenceId != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'ID: ${notification.referenceId}',
+                          style: AppTypography.caption.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),

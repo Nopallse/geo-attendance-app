@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../styles/colors.dart';
 import '../../../styles/typography.dart';
+import 'package:go_router/go_router.dart';
 
 class LogoutButton extends StatelessWidget {
   final VoidCallback onLogout;
@@ -105,7 +106,7 @@ class LogoutConfirmDialog extends StatelessWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
+                      onPressed: () => context.pop(false),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         foregroundColor: AppColors.textSecondary,
@@ -120,7 +121,7 @@ class LogoutConfirmDialog extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
+                      onPressed: () => context.pop(true),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.error,
                         foregroundColor: AppColors.white,

@@ -4,7 +4,7 @@ import '../../api/endpoints.dart';
 class AttendanceService {
   final ApiService _apiService = ApiService();
 
-  Future<Map<String, dynamic>> createAttendance(bool isCheckIn, double latitude, double longitude) async {
+  Future<Map<String, dynamic>> createAttendance(bool isCheckIn, double latitude, double longitude, int lokasi_id) async {
     try {
       return await _apiService.post(
         ApiEndpoints.createAttendance,
@@ -12,6 +12,7 @@ class AttendanceService {
           "type": isCheckIn ? "masuk" : "keluar",
           "latitude": latitude,
           "longitude": longitude,
+          "lokasi_id": lokasi_id
         },
       );
     } catch (e) {

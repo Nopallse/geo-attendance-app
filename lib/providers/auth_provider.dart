@@ -12,11 +12,13 @@ class AuthProvider with ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _successMessage;
 
   User? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isLoggedIn => _user != null;
+  String? get successMessage => _successMessage;
 
   // Initialize provider - check if user is logged in
   Future<void> init() async {
@@ -37,29 +39,33 @@ class AuthProvider with ChangeNotifier {
   }
 
   // Login user
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String username, String password) async {
     _isLoading = true;
     _errorMessage = null;
+    _successMessage = null;
     notifyListeners();
 
     try {
-      final result = await _authRepository.login(email, password);
+    final result = await _authRepository.login(username, password);
 
-      if (result['success']) {
-        await getUserProfile();
-        return true;
-      } else {
-        _errorMessage = result['message'];
-        return false;
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
+    if (result['success']) {
+      // Mengambil pesan sukses dari respons JSON
+      _successMessage = result['message'] ?? 'Login berhasil';
+      await getUserProfile();
+      return true;
+    } else {
+      // Mengambil pesan error dari respons JSON
+      _errorMessage = result['message'] ?? 'Login gagal';
       return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
+  } catch (e) {
+    _errorMessage = e.toString();
+    return false;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
   }
+}
 
   // Get user profile
   Future<void> getUserProfile() async {

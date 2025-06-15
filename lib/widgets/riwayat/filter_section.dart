@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../styles/colors.dart';
 import '../../../styles/typography.dart';
+import 'package:go_router/go_router.dart';
 
 class FilterSection extends StatelessWidget {
   final DateTime selectedMonth;
@@ -236,7 +237,7 @@ class FilterSection extends StatelessWidget {
                     return InkWell(
                       onTap: () {
                         onMonthSelected(month);
-                        Navigator.pop(context);
+                        context.pop();
                       },
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
@@ -295,7 +296,7 @@ class FilterSection extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () =>context.pop(),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           side: BorderSide(color: AppColors.divider),
@@ -316,7 +317,7 @@ class FilterSection extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () {
                           onMonthSelected(DateTime.now());
-                          Navigator.pop(context);
+                          context.pop();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,

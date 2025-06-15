@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../data/models/notification_model.dart';
 import '../../styles/colors.dart';
 import '../../styles/typography.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 class NotificationCard extends StatelessWidget {
-  final Map<String, dynamic> notification;
+  final NotificationModel notification;
   final VoidCallback onTap;
 
   const NotificationCard({
@@ -12,81 +14,102 @@ class NotificationCard extends StatelessWidget {
     required this.onTap,
   }) : super(key: key);
 
+  Color _getNotificationColor() {
+    if (notification.isRead) {
+      return Colors.grey;
+    }
+
+    switch (notification.type.toLowerCase()) {
+      case 'attendance':
+        return const Color(0xFF2196F3);
+      case 'leave':
+        return const Color(0xFFFF9800);
+      case 'office':
+        return const Color(0xFF4CAF50);
+      default:
+        return const Color(0xFF2196F3);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bool isInfo = notification['type'] == 'info';
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+    final color = _getNotificationColor();
+    
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: notification.isRead ? Colors.grey.shade200 : color.withOpacity(0.2),
+          width: 1,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: notification.isRead ? Colors.white : color.withOpacity(0.03),
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isInfo
-                      ? AppColors.info.withOpacity(0.1)
-                      : AppColors.success.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  isInfo ? Icons.info_outline : Icons.check_circle_outline,
-                  size: 24,
-                  color: isInfo ? AppColors.info : AppColors.success,
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Content
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title and time row
                     Row(
                       children: [
                         Expanded(
                           child: Text(
-                            notification['title'],
-                            style: AppTypography.subtitle1.copyWith(
-                              fontWeight: FontWeight.w600,
+                            notification.title,
+                            style: AppTypography.subtitle2.copyWith(
+                              fontWeight: notification.isRead ? FontWeight.normal : FontWeight.w600,
+                              color: notification.isRead ? Colors.grey[600] : Colors.black87,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(
-                          notification['time'],
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.textSecondary,
+                        if (!notification.isRead)
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    // Message
+                    const SizedBox(height: 4),
                     Text(
-                      notification['message'],
+                      notification.body,
                       style: AppTypography.bodyText2.copyWith(
-                        color: AppColors.textSecondary,
-                        height: 1.4,
+                        color: Colors.grey[600],
+                        height: 1.3,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 12,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          timeago.format(notification.createdAt, locale: 'id'),
+                          style: AppTypography.caption.copyWith(
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

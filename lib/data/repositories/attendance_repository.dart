@@ -4,7 +4,7 @@ import '../api/services/attendance_service.dart';
 
 
 abstract class AttendanceRepository {
-  Future<Map<String, dynamic>> createAttendance(bool isCheckIn, double latitude, double longitude);
+  Future<Map<String, dynamic>> createAttendance(bool isCheckIn, double latitude, double longitude, int lokasi_id);
   Future<Map<String, dynamic>> getTodayAttendance();
   Future<Map<String, dynamic>> getAttendanceHistory({int page, int limit});
 }
@@ -13,13 +13,17 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   final AttendanceService _attendanceService = AttendanceService();
 
   @override
-  Future<Map<String, dynamic>> createAttendance(bool isCheckIn, double latitude, double longitude) async {
-    return await _attendanceService.createAttendance(isCheckIn, latitude, longitude);
+  Future<Map<String, dynamic>> createAttendance(bool isCheckIn, double latitude, double longitude, lokasi_id) async {
+    return await _attendanceService.createAttendance(isCheckIn, latitude, longitude, lokasi_id);
   }
 
   @override
   Future<Map<String, dynamic>> getTodayAttendance() async {
-    return await _attendanceService.getTodayAttendance();
+    final response = await _attendanceService.getTodayAttendance();
+    final attendanceData = response['data'];
+
+    print("Fetching today's attendance: $attendanceData");
+    return attendanceData;
   }
 
   @override

@@ -18,8 +18,8 @@ class AttendanceSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Statuses for the cards
-    bool hasCheckedIn = todayAttendance?.checkInTime != null;
-    bool hasCheckedOut = todayAttendance?.checkOutTime != null;
+    bool hasCheckedIn = todayAttendance?.absenCheckIn != null;
+    bool hasCheckedOut = todayAttendance?.absenCheckOut != null;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -43,11 +43,11 @@ class AttendanceSummary extends StatelessWidget {
                 child: _buildStatusCard(
                   'Masuk',
                   hasCheckedIn,
-                  todayAttendance?.checkInTime != null
-                      ? DateFormat('HH:mm').format(todayAttendance!.checkInTime!)
-                      : '--:--',
-                  todayAttendance?.checkInStatus,
-                  hasCheckedIn ? AppColors.success : AppColors.textHint,
+                  todayAttendance?.absenCheckIn ?? '--:--',
+                  todayAttendance?.absenKat,
+                  (todayAttendance?.absenKat?.toLowerCase() == 'telat')
+                      ? Colors.red
+                      : (hasCheckedIn ? AppColors.success : AppColors.textHint),
                   Icons.login_rounded,
                 ),
               ),
@@ -57,11 +57,11 @@ class AttendanceSummary extends StatelessWidget {
                 child: _buildStatusCard(
                   'Keluar',
                   hasCheckedOut,
-                  todayAttendance?.checkOutTime != null
-                      ? DateFormat('HH:mm').format(todayAttendance!.checkOutTime!)
-                      : '--:--',
-                  todayAttendance?.statusKeluar,
-                  hasCheckedOut ? AppColors.success : AppColors.textHint,
+                  todayAttendance?.absenCheckOut ?? '--:--',
+                  todayAttendance?.absenSore,
+                  (todayAttendance?.absenSore?.toLowerCase() == 'awal')
+                      ? Colors.red
+                      : (hasCheckedOut ? AppColors.success : AppColors.textHint),
                   Icons.logout_rounded,
                 ),
               ),

@@ -23,15 +23,29 @@ class _RiwayatPageState extends State<RiwayatPage> {
   String _selectedFilter = 'Semua';
   List<String> _filterOptions = ['Semua', 'Hadir', 'Tidak Hadir', 'Terlambat'];
   Map<int, bool> _expandedItems = {};
+  // Flag untuk menandai apakah data sudah dimuat
+  bool _isInitialLoadComplete = false;
 
   @override
   void initState() {
     super.initState();
     _generateAllDatesInMonth();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadAttendanceHistory(true);
-    });
+    // Pindahkan pemanggilan loadAttendanceHistory langsung ke initState
+    _loadInitialData();
     _scrollController.addListener(_onScroll);
+  }
+
+  // Fungsi ini khusus untuk memuat data pertama kali
+  Future<void> _loadInitialData() async {
+    setState(() {
+      _isInitialLoadComplete = false;
+    });
+
+    await _loadAttendanceHistory(true);
+
+    setState(() {
+      _isInitialLoadComplete = true;
+    });
   }
 
   @override
@@ -69,12 +83,13 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
   void _onMonthChanged(DateTime newMonth) {
     setState(() {
+      _isInitialLoadComplete = false;
       _selectedMonth = newMonth;
       _generateAllDatesInMonth();
       // Reset expanded items
       _expandedItems = {};
     });
-    _loadAttendanceHistory(true);
+    _loadInitialData(); // Gunakan _loadInitialData untuk memastikan data dimuat dengan benar
   }
 
   void _toggleItemExpansion(int index) {
@@ -87,8 +102,8 @@ class _RiwayatPageState extends State<RiwayatPage> {
     if (_selectedFilter == 'Semua') return true;
     if (attendance == null) return _selectedFilter == 'Tidak Hadir';
 
-    final status = attendance.status?.toLowerCase() ?? '';
-    final isLate = attendance.checkInStatus?.toLowerCase() == 'telat';
+    final status = attendance.absenKat?.toLowerCase() ?? '';
+    final isLate = attendance.absenApel?.toLowerCase() == 'telat';
 
     if (_selectedFilter == 'Hadir') return status == 'hadir';
     if (_selectedFilter == 'Tidak Hadir') return status == 'tidak hadir' || status.isEmpty;
@@ -111,7 +126,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
         backgroundColor: AppColors.primary,
         centerTitle: true,
         elevation: 0,
-
       ),
       body: Column(
         children: [
@@ -129,7 +143,8 @@ class _RiwayatPageState extends State<RiwayatPage> {
           Expanded(
             child: Consumer<AttendanceProvider>(
               builder: (context, provider, child) {
-                if (provider.isLoading && provider.attendanceHistory.isEmpty) {
+                // Tampilkan loading saat inisialisasi pertama
+                if ((provider.isLoading && provider.attendanceHistory.isEmpty) || !_isInitialLoadComplete) {
                   return const ShimmerLoading();
                 }
 
@@ -148,23 +163,24 @@ class _RiwayatPageState extends State<RiwayatPage> {
   }
 
   Widget _buildAttendanceList(AttendanceProvider provider) {
+    // Buat Map untuk mempermudah pencarian data absensi berdasarkan tanggal
+    Map<String, Attendance> attendanceMap = {};
+    for (var item in provider.attendanceHistory) {
+      debugPrint('Attendance item: ${item.toJson()}');
+      if (item.absenTgl != null) {
+        final formattedDate = DateFormat('yyyy-MM-dd').format(item.absenTgl!);
+        attendanceMap[formattedDate] = item;
+      }
+    }
+
     List<Widget> filteredItems = [];
 
     for (int index = 0; index < _allDatesInMonth.length; index++) {
       final date = _allDatesInMonth[index];
       final formattedDate = DateFormat('yyyy-MM-dd').format(date);
 
-      // Find attendance for this date
-      Attendance? attendance;
-      for (var item in provider.attendanceHistory) {
-        if (item.tanggal != null) {
-          final attendanceDate = DateFormat('yyyy-MM-dd').format(item.tanggal!);
-          if (attendanceDate == formattedDate) {
-            attendance = item;
-            break;
-          }
-        }
-      }
+      // Gunakan Map untuk pencarian yang lebih efisien
+      Attendance? attendance = attendanceMap[formattedDate];
 
       // Apply filter
       if (_shouldShowItem(attendance)) {

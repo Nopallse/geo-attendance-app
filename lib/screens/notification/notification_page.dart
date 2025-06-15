@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../data/models/notification_model.dart';
 import '../../widgets/notification/notification_group_header.dart';
 import '../../widgets/notification/notification_card.dart';
 import '../../widgets/notification/notification_empty_state.dart';
 import '../../widgets/notification/notification_detail_sheet.dart';
 import '../../styles/colors.dart';
 import '../../styles/typography.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({Key? key}) : super(key: key);
@@ -14,80 +18,77 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  List<Map<String, dynamic>> notifications = [];
-  Map<String, List<Map<String, dynamic>>> groupedNotifications = {};
-  bool isLoading = true;
+  final ScrollController _scrollController = ScrollController();
+  bool _showUnreadOnly = false;
 
   @override
   void initState() {
     super.initState();
-    _loadNotificationData();
-  }
-
-  void _loadNotificationData() {
-    // Simulate async data loading
-    Future.delayed(const Duration(milliseconds: 300), () {
-      setState(() {
-        notifications = [
-          {
-            'id': 1,
-            'type': 'info',
-            'title': 'Pengumuman Libur',
-            'message': 'Kantor akan libur pada tanggal 25 Maret 2025 untuk perayaan hari raya.',
-            'time': '2 jam lalu',
-            'date': 'Hari Ini',
-          },
-          {
-            'id': 2,
-            'type': 'success',
-            'title': 'Absensi Berhasil',
-            'message': 'Anda telah berhasil melakukan check in pada pukul 08:02.',
-            'time': '5 jam lalu',
-            'date': 'Hari Ini',
-          },
-          {
-            'id': 3,
-            'type': 'info',
-            'title': 'Perubahan Jadwal',
-            'message': 'Mulai minggu depan, jam kerja akan berubah menjadi 08:30 - 17:30.',
-            'time': '1 hari lalu',
-            'date': 'Kemarin',
-          },
-          {
-            'id': 4,
-            'type': 'success',
-            'title': 'Absensi Berhasil',
-            'message': 'Anda telah berhasil melakukan check out pada pukul 17:05.',
-            'time': '1 hari lalu',
-            'date': 'Kemarin',
-          },
-          {
-            'id': 5,
-            'type': 'info',
-            'title': 'Pembaruan Sistem',
-            'message': 'Sistem absensi akan diperbarui pada tanggal 20 Maret 2025. Mohon maaf atas ketidaknyamanannya.',
-            'time': '2 hari lalu',
-            'date': 'Minggu Ini',
-          },
-        ];
-        _groupNotifications();
-        isLoading = false;
-      });
+    _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationProvider>().loadNotifications();
+      _setupNotificationListener();
     });
   }
 
-  void _groupNotifications() {
-    groupedNotifications.clear();
-    for (var notification in notifications) {
-      final date = notification['date'] as String;
-      if (!groupedNotifications.containsKey(date)) {
-        groupedNotifications[date] = [];
-      }
-      groupedNotifications[date]!.add(notification);
+  void _setupNotificationListener() {
+    // Listen for foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // Refresh notifications when a new message arrives
+      context.read<NotificationProvider>().refreshNotifications();
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      context.read<NotificationProvider>().loadNotifications();
     }
   }
 
-  void _showNotificationDetails(Map<String, dynamic> notification) {
+  Map<String, List<NotificationModel>> _groupNotifications(List<NotificationModel> notifications) {
+    final grouped = <String, List<NotificationModel>>{};
+    
+    for (var notification in notifications) {
+      if (_showUnreadOnly && notification.isRead) continue;
+      
+      final date = _getGroupDate(notification.createdAt);
+      if (!grouped.containsKey(date)) {
+        grouped[date] = [];
+      }
+      grouped[date]!.add(notification);
+    }
+    
+    return grouped;
+  }
+
+  String _getGroupDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final notificationDate = DateTime(date.year, date.month, date.day);
+
+    if (notificationDate == today) {
+      return 'Hari Ini';
+    } else if (notificationDate == yesterday) {
+      return 'Kemarin';
+    } else {
+      return 'Minggu Ini';
+    }
+  }
+
+  void _showNotificationDetails(NotificationModel notification) async {
+    // Mark notification as read when opened
+    if (!notification.isRead) {
+      await context.read<NotificationProvider>().markNotificationAsRead(notification.notifId);
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -96,11 +97,40 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  void _clearAllNotifications() {
-    setState(() {
-      notifications.clear();
-      groupedNotifications.clear();
-    });
+  void _showFilterOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Tampilkan Semua'),
+              leading: Icon(
+                Icons.all_inbox,
+                color: _showUnreadOnly ? Colors.grey : AppColors.primary,
+              ),
+              onTap: () {
+                setState(() => _showUnreadOnly = false);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Belum Dibaca'),
+              leading: Icon(
+                Icons.mark_email_unread,
+                color: _showUnreadOnly ? AppColors.primary : Colors.grey,
+              ),
+              onTap: () {
+                setState(() => _showUnreadOnly = true);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -110,47 +140,101 @@ class _NotificationPageState extends State<NotificationPage> {
       appBar: AppBar(
         title: Text(
           'Notifikasi',
-          style: AppTypography.headline4.copyWith(
+          style: AppTypography.headline6.copyWith(
             color: AppColors.white,
+            fontWeight: FontWeight.w600,
           ),
         ),
         backgroundColor: AppColors.primary,
         centerTitle: true,
         elevation: 0,
-
+        actions: [
+          IconButton(
+            icon: Icon(
+              _showUnreadOnly ? Icons.mark_email_unread : Icons.filter_list,
+              color: _showUnreadOnly ? Colors.white : Colors.white70,
+            ),
+            onPressed: _showFilterOptions,
+            tooltip: 'Filter Notifikasi',
+          ),
+          IconButton(
+            icon: const Icon(Icons.done_all),
+            onPressed: () async {
+              final provider = context.read<NotificationProvider>();
+              await provider.markAllNotificationsAsRead();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Semua notifikasi ditandai sebagai dibaca'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            tooltip: 'Tandai semua sebagai dibaca',
+          ),
+        ],
       ),
       body: SafeArea(
-        child: _buildBody(),
+        child: Consumer<NotificationProvider>(
+          builder: (context, provider, child) {
+            if (provider.isLoading && provider.notifications.isEmpty) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+
+            if (provider.notifications.isEmpty) {
+              return const NotificationEmptyState();
+            }
+
+            final groupedNotifications = _groupNotifications(provider.notifications);
+
+            if (groupedNotifications.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.mark_email_read,
+                      size: 48,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _showUnreadOnly
+                          ? 'Tidak ada notifikasi yang belum dibaca'
+                          : 'Tidak ada notifikasi',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: provider.refreshNotifications,
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                itemCount: _calculateItemCount(groupedNotifications),
+                itemBuilder: (context, index) => _buildListItem(
+                  context,
+                  index,
+                  groupedNotifications,
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    if (notifications.isEmpty) {
-      return const NotificationEmptyState();
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        setState(() => isLoading = true);
-        await Future.delayed(const Duration(seconds: 1));
-        _loadNotificationData();
-      },
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _calculateItemCount(),
-        itemBuilder: _buildListItem,
-      ),
-    );
-  }
-
-  int _calculateItemCount() {
+  int _calculateItemCount(Map<String, List<NotificationModel>> groupedNotifications) {
     int count = 0;
     groupedNotifications.forEach((date, notifs) {
       count += 1; // Header
@@ -159,7 +243,11 @@ class _NotificationPageState extends State<NotificationPage> {
     return count;
   }
 
-  Widget? _buildListItem(BuildContext context, int index) {
+  Widget? _buildListItem(
+    BuildContext context,
+    int index,
+    Map<String, List<NotificationModel>> groupedNotifications,
+  ) {
     int currentIndex = 0;
     for (var entry in groupedNotifications.entries) {
       if (currentIndex == index) {
@@ -169,18 +257,15 @@ class _NotificationPageState extends State<NotificationPage> {
 
       for (var notification in entry.value) {
         if (currentIndex == index) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: NotificationCard(
+          return NotificationCard(
               notification: notification,
               onTap: () => _showNotificationDetails(notification),
-            ),
-          );
+            );
+
         }
         currentIndex++;
       }
     }
     return null;
   }
-
 }

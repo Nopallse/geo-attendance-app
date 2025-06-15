@@ -16,15 +16,19 @@ class AttendanceProvider with ChangeNotifier {
   String? _errorMessage;
   int _currentPage = 1;
   bool _hasMoreData = true;
+  
+  // Tambahkan variabel untuk statistik
+  Map<String, dynamic> _statistics = {};
 
   Attendance? get todayAttendance => _todayAttendance;
   List<Attendance> get attendanceHistory => _attendanceHistory;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasMoreData => _hasMoreData;
+  Map<String, dynamic> get statistics => _statistics;
 
   // Check in or check out
-  Future<bool> createAttendance(bool isCheckIn, LatLng position) async {
+  Future<bool> createAttendance(bool isCheckIn, LatLng position, lokasiId) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -34,6 +38,7 @@ class AttendanceProvider with ChangeNotifier {
         isCheckIn,
         position.latitude,
         position.longitude,
+        lokasiId,
       );
 
       if (result['success']) {
@@ -69,8 +74,8 @@ class AttendanceProvider with ChangeNotifier {
       if (result['success']) {
         if (result['data'] != null) {
           debugPrint('API Response: $result');
-          _todayAttendance = Attendance.fromJson(result['data']['data']);
-          debugPrint('Today Attendance: $_todayAttendance');
+          _todayAttendance = Attendance.fromJson(result['data']);
+          debugPrint('Today Attendance provider: $_todayAttendance');
         } else {
           _todayAttendance = null;
         }
@@ -91,6 +96,7 @@ class AttendanceProvider with ChangeNotifier {
       _currentPage = 1;
       _attendanceHistory = [];
       _hasMoreData = true;
+      _statistics = {};
     }
 
     if (_isLoading || (!_hasMoreData && !refresh)) return;
@@ -102,26 +108,37 @@ class AttendanceProvider with ChangeNotifier {
     try {
       final result = await _attendanceRepository.getAttendanceHistory(
         page: _currentPage,
-        limit: 10,
+        limit: 31,
       );
 
       if (result['success']) {
-        debugPrint('API Response: $result');
+        debugPrint('API Response history success: $result');
 
         final dynamic data = result['data'];
         List<dynamic> attendanceData = [];
 
         // Handle nested data structure
         if (data is Map<String, dynamic> && data.containsKey('data')) {
-          if (data['success'] == true && data['data'] is List) {
-            attendanceData = data['data'];
+          if (data['success'] == true) {
+            // Ambil data absensi
+            if (data['data'] is List) {
+              attendanceData = data['data'];
+            }
+            
+            // Ambil data statistik
+            if (data.containsKey('statistics') && data['statistics'] is Map<String, dynamic>) {
+              _statistics = Map<String, dynamic>.from(data['statistics']);
+              debugPrint('Statistics data: $_statistics');
+            }
+            debugPrint('Attendance data: $attendanceData');
           }
         } else if (data is List) {
           attendanceData = data;
         }
 
         final List<Attendance> newAttendances =
-        attendanceData.map((item) => Attendance.fromJson(item)).toList();
+            attendanceData.map((item) => Attendance.fromJson(item)).toList();
+        debugPrint('new attendances data: $newAttendances');
 
         if (newAttendances.isEmpty) {
           _hasMoreData = false;
@@ -130,6 +147,7 @@ class AttendanceProvider with ChangeNotifier {
           _currentPage++;
         }
       } else {
+        debugPrint('API Response history: $result');
         _errorMessage = result['message'];
       }
     } catch (e) {

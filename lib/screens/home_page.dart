@@ -1,39 +1,47 @@
+// lib/screens/home/home_page.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
-import 'package:absensi_app/screens/absensi/absensi_page.dart';
-import 'package:absensi_app/screens/dashboard/dashboard_page.dart';
-import 'package:absensi_app/screens/profile/profile_page.dart';
-import 'package:absensi_app/screens/riwayat/riwayat_page.dart';
-import 'package:absensi_app/screens/notification/notification_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final Widget child;
+
+  const HomePage({
+    Key? key,
+    required this.child,
+  }) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  int _bottomNavIndex = 0;
-  final List<IconData> iconList = [
+  final List<String> _routePaths = [
+    '/dashboard',
+    '/riwayat',
+    '/notifications',
+    '/profile',
+  ];
+
+  final List<IconData> _iconList = [
     Icons.home_rounded,
     Icons.history_rounded,
     Icons.notifications_rounded,
     Icons.person_rounded,
   ];
 
-  // Pages for each tab
-  static const List<Widget> _pages = <Widget>[
-    DashboardPage(),
-    RiwayatPage(),
-    NotificationPage(),
-    ProfilePage(),
-  ];
+  int _getCurrentIndex(BuildContext context) {
+    final String location = GoRouterState.of(context).matchedLocation;
+    int index = _routePaths.indexOf(location);
+    return index < 0 ? 0 : index;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final int currentIndex = _getCurrentIndex(context);
+
     return Scaffold(
-      body: _pages[_bottomNavIndex],
+      body: widget.child,
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.blue,
         elevation: 8,
@@ -43,30 +51,26 @@ class _HomePageState extends State<HomePage> {
           color: Colors.white,
         ),
         onPressed: () {
-          // Show AbsensiPage as a modal or navigate to it
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const AbsensiPage(),
-            ),
-          );
+          // Navigate to the absensi page using GoRouter
+          context.push('/absensi');
         },
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: AnimatedBottomNavigationBar.builder(
-        itemCount: iconList.length,
+        itemCount: _iconList.length,
         tabBuilder: (int index, bool isActive) {
           return Icon(
-            iconList[index],
+            _iconList[index],
             size: 24,
             color: isActive ? Colors.blue : Colors.grey,
           );
         },
-        activeIndex: _bottomNavIndex,
+        activeIndex: currentIndex,
         gapLocation: GapLocation.center,
         notchSmoothness: NotchSmoothness.smoothEdge,
         leftCornerRadius: 32,
         rightCornerRadius: 32,
-        onTap: (index) => setState(() => _bottomNavIndex = index),
+        onTap: (index) => context.go(_routePaths[index]),
         backgroundColor: Colors.white,
         elevation: 12,
         shadow: const BoxShadow(

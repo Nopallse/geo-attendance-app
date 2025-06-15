@@ -1,58 +1,66 @@
 class User {
   final int id;
-  final String name;
+  final String username;
   final String email;
-  final String role;
-  final String? photoUrl;
+  final String level;
+  final int? idOpd;
+  final int? idUpt;
+  final int status;
   final String deviceId;
   final DateTime? createdAt;
-  final String? position;
-  final String? department;
-  final String? phone;
+  final DateTime? updatedAt;
 
   User({
     required this.id,
-    required this.name,
+    required this.username,
     required this.email,
-    required this.role,
-    this.photoUrl,
+    required this.level,
+    this.idOpd,
+    this.idUpt,
+    required this.status,
     required this.deviceId,
     this.createdAt,
-    this.position,
-    this.department,
-    this.phone,
+    this.updatedAt,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] ?? 0,
-      name: json['name'] ?? 'Unknown',
+      username: json['username'] ?? 'Unknown',
       email: json['email'] ?? '',
-      role: json['role'] ?? 'user',
-      photoUrl: json['photo_url'] != null ? json['photo_url'].toString() : null,
+      level: json['level'] ?? '0',
+      idOpd: json['id_opd'],
+      idUpt: json['id_upt'],
+      status: json['status'] ?? 0,
       deviceId: json['device_id'] ?? '',
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'])
+      createdAt: json['createdAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['createdAt'])
           : null,
-      position: json['position'],
-      department: json['department'],
-      phone: json['phone'],
-
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['updatedAt'])
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
+      'username': username,
       'email': email,
-      'role': role,
-      'photo_url': photoUrl,
+      'level': level,
+      'id_opd': idOpd,
+      'id_upt': idUpt,
+      'status': status,
       'device_id': deviceId,
-      'created_at': createdAt?.toIso8601String(),
-      'position': position,
-      'department': department,
-      'phone': phone,
+      'createdAt': createdAt?.millisecondsSinceEpoch,
+      'updatedAt': updatedAt?.millisecondsSinceEpoch,
     };
+  }
+
+  @override
+  String toString() {
+    return 'User(id: $id, username: $username, email: $email, level: $level, '
+        'idOpd: $idOpd, idUpt: $idUpt, status: $status, deviceId: $deviceId, '
+        'createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 }

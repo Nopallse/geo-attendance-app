@@ -1,27 +1,9 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPrefsUtils {
-  static const String tokenKey = "token";
+  static const String isLoggedInKey = "is_logged_in";
   static const String deviceIdKey = "device_id";
   static const String userDataKey = "user_data";
-
-  // Get token
-  static Future<String?> getToken() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString(tokenKey);
-  }
-
-  // Save token
-  static Future<bool> saveToken(String token) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.setString(tokenKey, token);
-  }
-
-  // Remove token
-  static Future<bool> removeToken() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.remove(tokenKey);
-  }
 
   // Get device ID
   static Future<String?> getDeviceId() async {
@@ -53,10 +35,16 @@ class SharedPrefsUtils {
     return prefs.remove(userDataKey);
   }
 
+  // Set login status
+  static Future<bool> setLoggedIn(bool status) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.setBool(isLoggedInKey, status);
+  }
+
   // Check if user is logged in
   static Future<bool> isLoggedIn() async {
-    final token = await getToken();
-    return token != null && token.isNotEmpty;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(isLoggedInKey) ?? false;
   }
 
   // Clear all saved data (for logout)

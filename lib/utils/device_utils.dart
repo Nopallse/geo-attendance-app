@@ -46,16 +46,13 @@ class DeviceUtils {
   static String? _getIdFromDeviceInfo(BaseDeviceInfo deviceInfo) {
     try {
       if (deviceInfo is AndroidDeviceInfo) {
-        // For Android, use a combination of identifiers to create a unique ID
         return '${deviceInfo.id}_${deviceInfo.model}_${deviceInfo.brand}';
       } else if (deviceInfo is IosDeviceInfo) {
-        // For iOS, use identifierForVendor if available
         return deviceInfo.identifierForVendor;
       }
     } catch (e) {
       _logger.e('Error extracting device ID: $e');
     }
-
     return null;
   }
 }

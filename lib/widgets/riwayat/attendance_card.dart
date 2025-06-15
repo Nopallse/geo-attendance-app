@@ -26,7 +26,6 @@ class AttendanceCard extends StatelessWidget {
     final bool hasAttendance = attendance != null;
     final bool isToday = DateUtils.isSameDay(date, DateTime.now());
     final bool isPast = date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
-
     Color cardColor;
     Color borderColor;
     double elevation = 2;
@@ -193,11 +192,10 @@ class AttendanceCard extends StatelessWidget {
   }
 
   Widget _buildCompactAttendanceInfo(Attendance attendance) {
-    final DateTime? checkInTime = attendance.checkInTime;
-    final DateTime? checkOutTime = attendance.checkOutTime;
-    final bool isLate = attendance.checkInStatus?.toLowerCase() == 'telat';
-    final bool isEarlyOut = attendance.checkOutStatus?.toLowerCase() == 'pulang_awal';
-
+    final String? checkInTime = attendance.absenCheckIn;
+    final String? checkOutTime = attendance.absenCheckOut;
+    final bool isLate = attendance.absenKat?.toLowerCase() == 'telat';
+    final bool isEarlyOut = attendance.absenKat?.toLowerCase() == 'pulang_awal';
     return Row(
       children: [
         Expanded(
@@ -210,7 +208,7 @@ class AttendanceCard extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                checkInTime != null ? DateFormat('HH:mm').format(checkInTime) : '-',
+                checkInTime != null ? checkInTime : '-',
                 style: AppTypography.bodyText2.copyWith(
                   fontWeight: FontWeight.w500,
                   color: isLate ? AppColors.error : AppColors.success,
@@ -229,7 +227,7 @@ class AttendanceCard extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                checkOutTime != null ? DateFormat('HH:mm').format(checkOutTime) : '-',
+                checkOutTime != null ? checkOutTime : '-',
                 style: AppTypography.bodyText2.copyWith(
                   fontWeight: FontWeight.w500,
                   color: isEarlyOut ? AppColors.warning : AppColors.info,
@@ -238,14 +236,14 @@ class AttendanceCard extends StatelessWidget {
             ],
           ),
         ),
-        StatusBadge(status: attendance.status ?? 'tidak hadir', small: true),
+        StatusBadge(status: attendance.absenKat ?? 'tidak hadir', small: true),
       ],
     );
   }
 
   Widget _buildExpandedAttendanceDetails(Attendance attendance) {
-    final DateTime? checkInTime = attendance.checkInTime;
-    final DateTime? checkOutTime = attendance.checkOutTime;
+    final String? checkInTime = attendance.absenCheckIn;
+    final String? checkOutTime = attendance.absenCheckOut;
 
     return Container(
       padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
@@ -258,10 +256,10 @@ class AttendanceCard extends StatelessWidget {
               Expanded(
                 child: _buildTimeInfo(
                   'Masuk',
-                  checkInTime,
-                  attendance.checkInStatus == 'telat',
+                  checkInTime?.trim(),
+                  attendance.absenApel == 'telat',
                   Icons.login_rounded,
-                  attendance.checkInStatus,
+                  attendance.absenApel,
                 ),
               ),
               Container(
@@ -272,10 +270,10 @@ class AttendanceCard extends StatelessWidget {
               Expanded(
                 child: _buildTimeInfo(
                   'Keluar',
-                  checkOutTime,
-                  attendance.checkOutStatus == 'pulang_awal',
+                  checkOutTime?.trim(),
+                  attendance.absenSore == 'pulang_awal',
                   Icons.logout_rounded,
-                  attendance.checkOutStatus,
+                  attendance.absenSore,
                 ),
               ),
             ],
@@ -284,7 +282,7 @@ class AttendanceCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              StatusBadge(status: attendance.status ?? 'tidak hadir'),
+              StatusBadge(status: attendance.absenKat ?? 'tidak hadir'),
             ],
           ),
         ],
@@ -292,14 +290,15 @@ class AttendanceCard extends StatelessWidget {
     );
   }
 
+
   Widget _buildTimeInfo(
       String label,
-      DateTime? time,
+      String? timeStr,
       bool isLate,
       IconData icon,
       String? status,
       ) {
-    final color = time == null
+    final color = timeStr == null
         ? AppColors.textHint
         : (isLate ? AppColors.error : AppColors.success);
 
@@ -322,7 +321,7 @@ class AttendanceCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            time != null ? DateFormat('HH:mm:ss').format(time) : '-',
+            (timeStr != null && timeStr.trim().isNotEmpty) ? timeStr.trim() : '-',
             style: AppTypography.subtitle1.copyWith(
               fontWeight: FontWeight.w600,
               color: color,
@@ -349,6 +348,7 @@ class AttendanceCard extends StatelessWidget {
       ),
     );
   }
+
 
   String _formatStatus(String status) {
     switch (status.toLowerCase()) {

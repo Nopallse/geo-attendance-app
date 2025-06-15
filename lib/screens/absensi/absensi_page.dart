@@ -6,9 +6,10 @@ import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 import 'package:safe_device/safe_device.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/office_provider.dart';
-import '../../data/models/office_model.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/models/attendance_model.dart';
 
 class AbsensiPage extends StatefulWidget {
@@ -27,13 +28,14 @@ class _AbsensiPageState extends State<AbsensiPage> {
   bool _markersInitialized = false;
   bool _isWithinRadius = false;
   bool _isMockLocationDetected = false;
+  bool _isEmulatorDetected = false;
   final logger = Logger();
 
   @override
   void initState() {
     super.initState();
     _initializeLocationAndMarkers();
-    _checkMockLocation();
+    _checkDeviceSafety();
   }
 
   @override
@@ -43,29 +45,45 @@ class _AbsensiPageState extends State<AbsensiPage> {
     _loadInitialData();
   }
 
-  Future<void> _checkMockLocation() async {
+  Future<void> _checkDeviceSafety() async {
     try {
       bool isMockLocation = await SafeDevice.isMockLocation;
+      bool isRealDevice = await SafeDevice.isRealDevice; // benar: realDevice
+
       setState(() {
         _isMockLocationDetected = isMockLocation;
+        _isEmulatorDetected = !isRealDevice; // emulator jika bukan real
       });
-      logger.d("Mock location detected: $_isMockLocationDetected");
 
-      if (_isMockLocationDetected) {
-        // Show warning if mock location is detected
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Fake GPS terdeteksi! Anda tidak dapat melakukan absensi'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 5),
-            ),
-          );
-        }
-      }
     } catch (e) {
-      logger.e("Error checking mock location: $e");
+      logger.e("Error checking device safety: $e");
     }
+  }
+
+  void _showAwesomeSnackBar({
+    required String title,
+    required String message,
+    required ContentType contentType,
+  }) {
+    // Create the snackbar
+    final snackBar = SnackBar(
+      elevation: 0,
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Colors.transparent,
+      duration: const Duration(seconds: 4),
+      // Position at the top with margin
+      margin: const EdgeInsets.only(top: kToolbarHeight + 20, left: 20, right: 20, bottom: 0),
+      content: AwesomeSnackbarContent(
+        title: title,
+        message: message,
+        contentType: contentType,
+      ),
+    );
+
+    // Show the snackbar at the top
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(snackBar);
   }
 
   Future<void> _loadInitialData() async {
@@ -232,7 +250,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
     _updateMarkersAndCircles();
 
     // Re-check for mock location when getting current location
-    await _checkMockLocation();
+    await _checkDeviceSafety();
 
     if (_mapController != null) {
       _mapController!.animateCamera(
@@ -245,24 +263,15 @@ class _AbsensiPageState extends State<AbsensiPage> {
     logger.d('Absen ${isCheckIn ? "masuk" : "keluar"}');
 
     // Check for mock location before proceeding
-    await _checkMockLocation();
+    await _checkDeviceSafety();
 
-    if (_isMockLocationDetected) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Fake GPS terdeteksi! Anda tidak dapat melakukan absensi'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+
 
     if (!_isWithinRadius) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Anda harus berada dalam radius kantor untuk melakukan absensi'),
-          backgroundColor: Colors.red,
-        ),
+      _showAwesomeSnackBar(
+        title: 'Di Luar Radius',
+        message: 'Anda harus berada dalam radius kantor untuk melakukan absensi',
+        contentType: ContentType.warning,
       );
       return;
     }
@@ -270,33 +279,53 @@ class _AbsensiPageState extends State<AbsensiPage> {
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
 
     try {
+
+      int? _getNearbyOfficeId() {
+        final officeProvider = Provider.of<OfficeProvider>(context, listen: false);
+        for (var office in officeProvider.offices) {
+          double distance = _calculateDistance(_currentPosition, office.position);
+          if (distance <= office.radius) {
+            return office.id;
+          }
+        }
+        return null;
+      }
+
+      final lokasiId = _getNearbyOfficeId();
+      if (lokasiId == null) {
+        _showAwesomeSnackBar(
+          title: 'Tidak Ada Kantor Terdekat',
+          message: 'Tidak ditemukan kantor dalam radius yang ditentukan',
+          contentType: ContentType.warning,
+        );
+        return;
+      }
+
       final success = await attendanceProvider.createAttendance(
         isCheckIn,
         _currentPosition,
+        lokasiId,
       );
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Berhasil melakukan absen ${isCheckIn ? "masuk" : "keluar"}'),
-            backgroundColor: Colors.green,
-          ),
+        _showAwesomeSnackBar(
+          title: 'Berhasil',
+          message: 'Berhasil melakukan absen ${isCheckIn ? "masuk" : "keluar"}',
+          contentType: ContentType.success,
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(attendanceProvider.errorMessage ?? 'Terjadi kesalahan'),
-            backgroundColor: Colors.red,
-          ),
+        _showAwesomeSnackBar(
+          title: 'Gagal',
+          message: attendanceProvider.errorMessage ?? 'Terjadi kesalahan',
+          contentType: ContentType.failure,
         );
       }
     } catch (e) {
       logger.e("Error saat absen: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Terjadi kesalahan: $e'),
-          backgroundColor: Colors.red,
-        ),
+      _showAwesomeSnackBar(
+        title: 'Error',
+        message: 'Terjadi kesalahan: $e',
+        contentType: ContentType.failure,
       );
     }
   }
@@ -321,7 +350,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
@@ -338,6 +367,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
         builder: (context, attendanceProvider, officeProvider, child) {
           final isLoading = attendanceProvider.isLoading || officeProvider.isLoading;
           final todayAttendance = attendanceProvider.todayAttendance;
+          print ("Today Attendance: $todayAttendance");
 
           return Stack(
             children: [
@@ -355,7 +385,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
                       color: Colors.white,
                     ),
                   ),
-            ),
+                ),
             ],
           );
         },
@@ -421,7 +451,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
       right: 16,
       child: Column(
         children: [
-          if (_isMockLocationDetected)
+          if (_isMockLocationDetected || _isEmulatorDetected)
             Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -436,18 +466,20 @@ class _AbsensiPageState extends State<AbsensiPage> {
                   ),
                 ],
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.location_off,
                     color: Colors.white,
                     size: 20,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Fake GPS terdeteksi! Absensi tidak diizinkan',
-                      style: TextStyle(
+                      _isMockLocationDetected
+                          ? 'Fake GPS terdeteksi! Absensi tidak diizinkan'
+                          : 'Aplikasi berjalan di emulator! Absensi tidak diizinkan',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
                       ),
@@ -495,8 +527,9 @@ class _AbsensiPageState extends State<AbsensiPage> {
   }
 
   Widget _buildBottomSection(ThemeData theme, Attendance? todayAttendance) {
-    final checkInTime = todayAttendance?.checkInTime;
-    final checkOutTime = todayAttendance?.checkOutTime;
+    final checkInTime = todayAttendance?.absenCheckIn;
+    print("$todayAttendance <><><><><<>><><>");
+    final checkOutTime = todayAttendance?.absenCheckOut;
 
     return Container(
       decoration: const BoxDecoration(
@@ -507,17 +540,24 @@ class _AbsensiPageState extends State<AbsensiPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildAttendanceStatus(checkInTime, checkOutTime),
+          _buildAttendanceStatus(
+            checkInTime ,
+            checkOutTime,
+          ),
           const SizedBox(height: 24),
-          _buildAttendanceButtons(checkInTime, checkOutTime),
+          _buildAttendanceButtons(
+            checkInTime ,
+            checkOutTime,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildAttendanceStatus(DateTime? checkInTime, DateTime? checkOutTime) {
-    final formattedCheckInTime = _formatDateTime(checkInTime);
-    final formattedCheckOutTime = _formatDateTime(checkOutTime);
+  Widget _buildAttendanceStatus(String? checkInTime, String? checkOutTime) {
+    final formattedCheckInTime = checkInTime;
+    final formattedCheckOutTime = checkOutTime;
+    print("$checkInTime <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -594,9 +634,9 @@ class _AbsensiPageState extends State<AbsensiPage> {
     );
   }
 
-  Widget _buildAttendanceButtons(DateTime? checkInTime, DateTime? checkOutTime) {
+  Widget _buildAttendanceButtons(String? checkInTime, String? checkOutTime) {
     // Disable buttons if mock location is detected
-    final bool disableButtons = _isMockLocationDetected;
+    final bool disableButtons = _isMockLocationDetected ;
 
     return Row(
       children: [

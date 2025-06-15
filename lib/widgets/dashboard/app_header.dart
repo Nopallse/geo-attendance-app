@@ -95,8 +95,8 @@ class AppHeader extends StatelessWidget {
                       isLoading
                           ? _buildShimmerText(28, 200)
                           : Text(
-                        user?.name ?? 'User',
-                        style: AppTypography.headline1.copyWith(
+                        user?.email ?? 'User',
+                        style: AppTypography.headline2.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -115,6 +115,7 @@ class AppHeader extends StatelessWidget {
                           ? _buildShimmerText(14, 180)
                           : Row(
                         children: [
+                          // NIK Badge
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
@@ -123,26 +124,32 @@ class AppHeader extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1,
+                              ),
                             ),
                             child: Row(
                               children: [
                                 const Icon(
-                                  Icons.work_outline,
+                                  Icons.badge_outlined,
                                   color: Colors.white,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  user?.role?.toUpperCase() ?? 'STAFF',
+                                  'NIP: ${user?.username ?? 'N/A'}',
                                   style: AppTypography.overline.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          if (user?.department != null)
+                          // Jabatan Badge (jika diperlukan)
+                          if (user?.username != null)
                             Padding(
                               padding: const EdgeInsets.only(left: 8),
                               child: Container(
@@ -157,13 +164,13 @@ class AppHeader extends StatelessWidget {
                                 child: Row(
                                   children: [
                                     const Icon(
-                                      Icons.people_outline,
+                                      Icons.work_outline,
                                       color: Colors.white,
                                       size: 16,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      user?.department ?? '',
+                                      'STAFF',
                                       style: AppTypography.overline.copyWith(
                                         fontWeight: FontWeight.w600,
                                         color: Colors.white,

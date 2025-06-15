@@ -24,14 +24,6 @@ class ApiService {
       headers["Content-Type"] = "application/json";
     }
 
-    if (requiresAuth) {
-      String? token = await SharedPrefsUtils.getToken();
-      if (token == null) {
-        throw Exception("Authentication required but token not found");
-      }
-      headers["Authorization"] = "Bearer $token";
-    }
-
     return headers;
   }
 
@@ -86,6 +78,37 @@ class ApiService {
       return _handleResponse(response);
     } catch (e) {
       logger.e("POST Error: $e");
+      return {"success": false, "message": "Network error occurred: $e"};
+    }
+  }
+
+  // Perform PATCH request
+  Future<Map<String, dynamic>> patch(
+      String endpoint, {
+        Map<String, dynamic>? body,
+        bool requiresAuth = true,
+      }) async {
+    try {
+      final headers = await _getHeaders(requiresAuth: requiresAuth);
+      final url = Uri.parse('$baseUrl$endpoint');
+
+      logger.d("PATCH Request: $url");
+      if (body != null) {
+        logger.d("PATCH Body: $body");
+      }
+
+      final response = await http.patch(
+        url,
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      );
+
+      logger.d("Response Status: ${response.statusCode}");
+      logger.d("Response Body: ${response.body.substring(0, response.body.length > 100 ? 100 : response.body.length)}...");
+
+      return _handleResponse(response);
+    } catch (e) {
+      logger.e("PATCH Error: $e");
       return {"success": false, "message": "Network error occurred: $e"};
     }
   }

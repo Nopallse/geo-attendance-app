@@ -1,10 +1,35 @@
+import 'package:delightful_toast/toast/utils/enums.dart';
 import 'package:flutter/material.dart';
+import 'package:delightful_toast/toast/components/toast_card.dart';
+import 'package:delightful_toast/delight_toast.dart';
 import '../../../styles/colors.dart';
 import '../../../styles/typography.dart';
 import 'setting_tile.dart';
 
 class SettingsSection extends StatelessWidget {
   const SettingsSection({super.key});
+
+  void _showDelightToast(BuildContext context, String message) {
+    DelightToastBar(
+      autoDismiss: true,
+      snackbarDuration: const Duration(seconds: 2),
+      position: DelightSnackbarPosition.top,
+      builder: (context) => ToastCard(
+        leading: const Icon(
+          Icons.info_outline,
+          size: 28,
+          color: Colors.blue,
+        ),
+        title: Text(
+          message,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    ).show(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,12 +66,7 @@ class SettingsSection extends StatelessWidget {
                 title: 'Pengaturan Notifikasi',
                 showDivider: true,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Feature coming soon!'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  _showDelightToast(context, 'Feature coming soon!');
                 },
               ),
               SettingTile(
@@ -54,12 +74,7 @@ class SettingsSection extends StatelessWidget {
                 title: 'Bahasa',
                 showDivider: true,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Feature coming soon!'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  _showDelightToast(context, 'Feature coming soon!');
                 },
               ),
               SettingTile(
@@ -67,12 +82,7 @@ class SettingsSection extends StatelessWidget {
                 title: 'Keamanan',
                 showDivider: true,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Feature coming soon!'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  _showDelightToast(context, 'Feature coming soon!');
                 },
               ),
               SettingTile(
@@ -80,12 +90,7 @@ class SettingsSection extends StatelessWidget {
                 title: 'Bantuan & Dukungan',
                 showDivider: false,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Feature coming soon!'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  _showDelightToast(context, 'Feature coming soon!');
                 },
               ),
             ],

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:grouped_list/grouped_list.dart';
+import 'package:provider/provider.dart';
+import '../../providers/leave_provider.dart';
+import '../../data/models/leave_model.dart';
 import 'create_leave_form_page.dart';
 
 class LeaveFormPage extends StatefulWidget {
@@ -20,16 +23,11 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
   String? _selectedYear;
   List<String> _yearOptions = [];
 
-  // Mock data for leave requests
-  List<Map<String, dynamic>> _leaveRequests = [];
-  List<Map<String, dynamic>> _filteredLeaveRequests = [];
-
   @override
   void initState() {
     super.initState();
     _generateYearOptions();
-    _generateMockData();
-    _filterLeaveRequests(_selectedYear);
+    _loadLeaves();
   }
 
   void _generateYearOptions() {
@@ -48,173 +46,13 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
     });
   }
 
-  void _generateMockData() {
-    final List<Map<String, dynamic>> mockData = [
-      {
-        'id': '1',
-        'type': 'Izin',
-        'leaveType': 'jam',
-        'description': 'Urusan keluarga',
-        'start_date': DateTime(2025, 2, 24),
-        'end_date': DateTime(2025, 2, 24),
-        'start_time': '09:00',
-        'end_time': '12:00',
-        'status': 'Menunggu',
-      },
-      {
-        'id': '2',
-        'type': 'Cuti',
-        'leaveType': 'hari',
-        'description': 'Cuti tahunan',
-        'start_date': DateTime(2025, 1, 10),
-        'end_date': DateTime(2025, 1, 12),
-        'status': 'Disetujui',
-      },
-      {
-        'id': '3',
-        'type': 'Sakit',
-        'leaveType': 'hari',
-        'description': 'Demam',
-        'start_date': DateTime(2024, 12, 5),
-        'end_date': DateTime(2024, 12, 5),
-        'status': 'Disetujui',
-      },
-      {
-        'id': '4',
-        'type': 'Izin',
-        'leaveType': 'jam',
-        'description': 'Acara keluarga',
-        'start_date': DateTime(2024, 11, 15),
-        'end_date': DateTime(2024, 11, 15),
-        'start_time': '13:00',
-        'end_time': '17:00',
-        'status': 'Ditolak',
-      },
-      {
-        'id': '5',
-        'type': 'Cuti',
-        'leaveType': 'hari',
-        'description': 'Liburan',
-        'start_date': DateTime(2024, 10, 20),
-        'end_date': DateTime(2024, 10, 25),
-        'status': 'Disetujui',
-      },
-      {
-        'id': '6',
-        'type': 'Sakit',
-        'leaveType': 'jam',
-        'description': 'Checkup rutin',
-        'start_date': DateTime(2024, 9, 8),
-        'end_date': DateTime(2024, 9, 8),
-        'start_time': '10:00',
-        'end_time': '12:30',
-        'status': 'Disetujui',
-      },
-      {
-        'id': '7',
-        'type': 'Izin',
-        'leaveType': 'hari',
-        'description': 'Menghadiri seminar',
-        'start_date': DateTime(2024, 8, 17),
-        'end_date': DateTime(2024, 8, 17),
-        'status': 'Menunggu',
-      },
-      {
-        'id': '8',
-        'type': 'Cuti',
-        'leaveType': 'hari',
-        'description': 'Cuti bersama',
-        'start_date': DateTime(2024, 7, 1),
-        'end_date': DateTime(2024, 7, 3),
-        'status': 'Disetujui',
-      },
-      {
-        'id': '9',
-        'type': 'Sakit',
-        'leaveType': 'jam',
-        'description': 'Sakit gigi',
-        'start_date': DateTime(2024, 6, 22),
-        'end_date': DateTime(2024, 6, 22),
-        'start_time': '08:00',
-        'end_time': '11:00',
-        'status': 'Disetujui',
-      },
-      {
-        'id': '10',
-        'type': 'Izin',
-        'leaveType': 'jam',
-        'description': 'Mengurus dokumen',
-        'start_date': DateTime(2024, 5, 12),
-        'end_date': DateTime(2024, 5, 12),
-        'start_time': '14:00',
-        'end_time': '16:00',
-        'status': 'Ditolak',
-      },
-      {
-        'id': '11',
-        'type': 'Cuti',
-        'leaveType': 'hari',
-        'description': 'Liburan keluarga',
-        'start_date': DateTime(2024, 4, 15),
-        'end_date': DateTime(2024, 4, 20),
-        'status': 'Disetujui',
-      },
-      {
-        'id': '12',
-        'type': 'Sakit',
-        'leaveType': 'hari',
-        'description': 'Flu',
-        'start_date': DateTime(2024, 3, 28),
-        'end_date': DateTime(2024, 3, 28),
-        'status': 'Disetujui',
-      },
-      {
-        'id': '13',
-        'type': 'Izin',
-        'leaveType': 'jam',
-        'description': 'Pengurusan SIM',
-        'start_date': DateTime(2023, 12, 5),
-        'end_date': DateTime(2023, 12, 5),
-        'start_time': '09:00',
-        'end_time': '11:30',
-        'status': 'Disetujui',
-      },
-      {
-        'id': '14',
-        'type': 'Cuti',
-        'leaveType': 'hari',
-        'description': 'Cuti akhir tahun',
-        'start_date': DateTime(2023, 12, 27),
-        'end_date': DateTime(2023, 12, 30),
-        'status': 'Disetujui',
-      },
-    ];
-
-    setState(() {
-      _leaveRequests = mockData;
-    });
-  }
-
-  void _filterLeaveRequests(String? year) {
-    if (year == null) {
-      setState(() {
-        _filteredLeaveRequests = List.from(_leaveRequests);
-      });
-      return;
-    }
-
-    final filtered = _leaveRequests.where((request) {
-      final startDate = request['start_date'] as DateTime;
-      return startDate.year.toString() == year;
-    }).toList();
-
-    setState(() {
-      _filteredLeaveRequests = filtered;
-    });
+  Future<void> _loadLeaves() async {
+    final leaveProvider = Provider.of<LeaveProvider>(context, listen: false);
+    await leaveProvider.getLeaves(page: 1, limit: 10);
   }
 
   void _showCreateLeaveForm() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => CreateLeaveFormPage()));
+    Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateLeaveFormPage()));
   }
 
   String _getDateRangeText(DateTime startDate, DateTime endDate) {
@@ -243,25 +81,71 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
           'Riwayat Cuti & Izin',
           style: TextStyle(
             fontWeight: FontWeight.bold,
+            color: Colors.white
           ),
         ),
         backgroundColor: primaryColor,
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white), // Set back button color to white
+
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreateLeaveForm,
         backgroundColor: primaryColor,
-        icon: const Icon(Icons.add),
-        label: const Text('Ajukan Izin'),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Ajukan Izin',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         elevation: 4,
       ),
       body: Column(
         children: [
           _buildYearFilter(),
           Expanded(
-            child: _filteredLeaveRequests.isEmpty
-                ? _buildEmptyState()
-                : _buildGroupedLeaveList(),
+            child: Consumer<LeaveProvider>(
+              builder: (context, leaveProvider, _) {
+                if (leaveProvider.isLoading && leaveProvider.leaves.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (leaveProvider.error != null && leaveProvider.leaves.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red.shade300,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Terjadi kesalahan: ${leaveProvider.error}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadLeaves,
+                          child: const Text('Coba Lagi'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (leaveProvider.leaves.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                return _buildGroupedLeaveList(leaveProvider.leaves);
+              },
+            ),
           ),
         ],
       ),
@@ -311,7 +195,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                     setState(() {
                       _selectedYear = newValue;
                     });
-                    _filterLeaveRequests(newValue);
+                    _loadLeaves();
                   },
                 ),
               ),
@@ -355,10 +239,19 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
     );
   }
 
-  Widget _buildGroupedLeaveList() {
-    return GroupedListView<Map<String, dynamic>, String>(
-      elements: _filteredLeaveRequests,
-      groupBy: (element) => _getGroupMonth(element['start_date']),
+  Widget _buildGroupedLeaveList(List<LeaveModel> leaves) {
+    // Filter leaves by selected year
+    final filteredLeaves = leaves.where((leave) {
+      return leave.startDate.year.toString() == _selectedYear;
+    }).toList();
+
+    if (filteredLeaves.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return GroupedListView<LeaveModel, String>(
+      elements: filteredLeaves,
+      groupBy: (element) => _getGroupMonth(element.startDate),
       groupComparator: (value1, value2) {
         // Sort groups in reverse chronological order (newest first)
         final date1 = DateFormat('MMMM yyyy').parse(value1);
@@ -367,7 +260,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
       },
       itemComparator: (item1, item2) {
         // Sort items in reverse chronological order (newest first)
-        return item2['start_date'].compareTo(item1['start_date']);
+        return item2.startDate.compareTo(item1.startDate);
       },
       order: GroupedListOrder.ASC,
       useStickyGroupSeparators: true,
@@ -378,7 +271,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
               decoration: BoxDecoration(
-                color: secondaryColor.withOpacity(0.3),
+                color: secondaryColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -387,6 +280,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
+                  color: Colors.white
                 ),
               ),
             ),
@@ -403,41 +297,38 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
         ),
       ),
       padding: const EdgeInsets.only(bottom: 80), // Extra padding for FAB
-      itemBuilder: (context, element) {
+      itemBuilder: (context, leave) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-          child: _buildLeaveItem(element),
+          child: _buildLeaveItem(leave),
         );
       },
     );
   }
 
-  Widget _buildLeaveItem(Map<String, dynamic> leave) {
+  Widget _buildLeaveItem(LeaveModel leave) {
     Color statusColor;
     Color typeColor;
     IconData typeIcon;
-    final bool isHourlyLeave = leave['leaveType'] == 'jam';
+    final bool isHourlyLeave = leave.startDate.hour != 0 || leave.endDate.hour != 0;
 
-    final dateRange = _getDateRangeText(
-      leave['start_date'],
-      leave['end_date'],
-    );
+    final dateRange = _getDateRangeText(leave.startDate, leave.endDate);
 
     // Set status color
-    switch (leave['status']) {
-      case 'Disetujui':
+    switch (leave.status) {
+      case 'approved':
         statusColor = const Color(0xFF4CAF50);
         break;
-      case 'Ditolak':
+      case 'rejected':
         statusColor = const Color(0xFFE57373);
         break;
-      case 'Menunggu':
+      case 'pending':
       default:
         statusColor = const Color(0xFFFFA726);
     }
 
     // Set type color and icon
-    switch (leave['type']) {
+    switch (leave.category) {
       case 'Cuti':
         typeColor = const Color(0xFF9575CD);
         typeIcon = Icons.beach_access;
@@ -489,7 +380,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                         Row(
                           children: [
                             Text(
-                              leave['type'],
+                              leave.category,
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -519,7 +410,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          leave['description'],
+                          leave.description ?? '',
                           style: TextStyle(
                             fontSize: 15,
                             color: Colors.grey.shade700,
@@ -566,7 +457,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              '${leave['start_time']} - ${leave['end_time']}',
+                              '${DateFormat('HH:mm').format(leave.startDate)} - ${DateFormat('HH:mm').format(leave.endDate)}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey.shade700,
@@ -589,7 +480,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                       ),
                     ),
                     child: Text(
-                      leave['status'],
+                      _getStatusText(leave.status),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -604,5 +495,17 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
         ),
       ),
     );
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'approved':
+        return 'Disetujui';
+      case 'rejected':
+        return 'Ditolak';
+      case 'pending':
+      default:
+        return 'Menunggu';
+    }
   }
 }

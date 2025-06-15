@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../login/login_page.dart';
 import 'package:intl/intl.dart';
 import '../../styles/colors.dart';
 import '../../widgets/dashboard/app_header.dart';
@@ -40,6 +40,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
         // Format join date if available
         String joinDate = 'Not available';
+        print(user);
         if (user != null && user.createdAt != null) {
           try {
             joinDate = DateFormat('dd MMMM yyyy').format(user.createdAt!);
@@ -102,12 +103,45 @@ class _ProfilePageState extends State<ProfilePage> {
     if (shouldLogout == true) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.logout();
+
+
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginPage()),
-      );
+
+      // Use GoRouter for navigation
+      context.go('/login');
     }
+  }
+}
+
+class LogoutConfirmDialog extends StatelessWidget {
+  const LogoutConfirmDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Logout Confirmation'),
+      content: const Text('Are you sure you want to logout?'),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => context.pop(false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => context.pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text('Logout'),
+        ),
+      ],
+    );
   }
 }
 
