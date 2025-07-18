@@ -18,6 +18,11 @@ class ApiEndpoints {
   static const String leaves = "/user/ketidakhadiran";
   static const String leaveDetail = "/user/ketidakhadiran/"; // Append ID
 
+  // Late Arrival Request endpoints
+  static const String lateArrivalRequests = "/permohonan-terlambat/";
+  static const String myLateArrivalRequests = "/permohonan-terlambat/my-requests";
+  static const String todayLateArrivalRequest = "/permohonan-terlambat/today";
+
   // Notification endpoints
   static const String notifications = "/user/notifikasi";
   static const String saveFcmToken = "/user/fcm-token"; // New endpoint for FCM token

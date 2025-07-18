@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/attendance_provider.dart';
+import '../../providers/late_arrival_provider.dart';
 import '../../providers/office_provider.dart';
 import '../../data/models/attendance_model.dart';
 import '../../data/models/user_model.dart';
@@ -25,12 +26,16 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _currentDate = DateTime.now();
-    _loadData();
+    // Schedule the data loading after the build phase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
+    final lateArrivalProvider = Provider.of<LateArrivalProvider>(context, listen: false);
     final officeProvider = Provider.of<OfficeProvider>(context, listen: false);
 
     try {
@@ -43,6 +48,7 @@ class _DashboardPageState extends State<DashboardPage> {
         authProvider.user == null ? authProvider.getUserProfile() : Future.value(null),
         attendanceProvider.getTodayAttendance(),
         attendanceProvider.getAttendanceHistory(refresh: true),
+        lateArrivalProvider.getTodayRequest(),
         officeProvider.offices.isEmpty ? officeProvider.getOffices() : Future.value(null),
       ]);
       
@@ -108,6 +114,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       isLoading: isLoading
                   ),
                   LeaveButton(onPressed: _navigateToLeaveForm),
+                  const LateArrivalButton(),
                 ],
               ),
             ),

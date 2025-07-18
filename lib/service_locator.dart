@@ -8,12 +8,15 @@ import 'data/repositories/auth_repository.dart';
 import 'data/repositories/attendance_repository.dart';
 import 'data/repositories/office_repository.dart';
 import 'data/repositories/leave_repository.dart';
+import 'data/repositories/late_arrival_repository.dart';
 import 'data/repositories/notification_repository.dart';
 import 'providers/auth_provider.dart';
 import 'providers/attendance_provider.dart';
 import 'providers/office_provider.dart';
 import 'providers/leave_provider.dart';
+import 'providers/late_arrival_provider.dart';
 import 'providers/notification_provider.dart';
+import 'services/late_arrival_service.dart';
 import 'data/api/services/fcm_service.dart';
 
 final getIt = GetIt.instance;
@@ -44,8 +47,16 @@ Future<void> setupServiceLocator() async {
   getIt.registerSingleton<LeaveRepository>(
     LeaveRepositoryImpl(),
   );
+  getIt.registerSingleton<LateArrivalRepository>(
+    LateArrivalRepository(),
+  );
   getIt.registerSingleton<NotificationRepository>(
     NotificationRepositoryImpl(getIt<ApiService>()),
+  );
+
+  // Services
+  getIt.registerSingleton<LateArrivalService>(
+    LateArrivalService(repository: getIt<LateArrivalRepository>()),
   );
 
   // Providers
@@ -60,7 +71,7 @@ Future<void> setupServiceLocator() async {
     ),
   );
   getIt.registerFactory<OfficeProvider>(
-        () => OfficeProvider(
+    () => OfficeProvider(
       officeRepository: getIt<OfficeRepository>(),
     ),
   );
@@ -70,6 +81,11 @@ Future<void> setupServiceLocator() async {
   getIt.registerFactory<NotificationProvider>(
     () => NotificationProvider(
       getIt<NotificationRepository>(),
+    ),
+  );
+  getIt.registerFactory<LateArrivalProvider>(
+    () => LateArrivalProvider(
+      repository: getIt<LateArrivalRepository>(),
     ),
   );
 }

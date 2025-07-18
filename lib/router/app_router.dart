@@ -13,6 +13,8 @@ import 'package:absensi_app/screens/profile/profile_page.dart';
 import 'package:absensi_app/screens/absensi/absensi_page.dart';
 import 'package:absensi_app/screens/leave/leave_form_page.dart';
 import 'package:absensi_app/screens/leave/create_leave_form_page.dart';
+import 'package:absensi_app/screens/leave/late_arrival_requests_page.dart';
+import 'package:absensi_app/screens/leave/create_late_arrival_request_page.dart';
 import 'package:absensi_app/utils/shared_prefs_utils.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -102,31 +104,40 @@ class AppRouter {
         builder: (context, state) => const CreateLeaveFormPage(),
       ),
 
+      // Late arrival requests page (full screen modal)
+      GoRoute(
+        path: '/late-arrival-requests',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const LateArrivalRequestsPage(),
+      ),
+
+      // Create late arrival request page (full screen modal)
+      GoRoute(
+        path: '/create-late-arrival-request',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const CreateLateArrivalRequestPage(),
+      ),
+
     ],
   );
 
-  // Authentication redirect logic
   static Future<String?> _handleRedirect(BuildContext context, GoRouterState state) async {
     final isLoggedIn = await SharedPrefsUtils.isLoggedIn();
     final isGoingToLogin = state.matchedLocation == '/login';
     final isInitialSplash = state.matchedLocation == '/';
 
-    // Allow access to splash screen on initial app load
     if (isInitialSplash) {
       return null;
     }
 
-    // If not logged in and not going to login, redirect to login
     if (!isLoggedIn && !isGoingToLogin) {
       return '/login';
     }
 
-    // If logged in and going to login, redirect to dashboard
     if (isLoggedIn && isGoingToLogin) {
       return '/dashboard';
     }
 
-    // No redirection needed
     return null;
   }
 }

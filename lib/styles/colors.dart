@@ -22,6 +22,7 @@ class AppColors {
   static const Color background = Color(0xFFF5F7FA);
   static const Color cardBackground = Color(0xFFFFFFFF);
   static const Color divider = Color(0xFFE0E0E0);
+  static const Color border = Color(0xFFE0E0E0);
   static const Color disabledButton = Color(0xFFBDBDBD);
   static const Color textPrimary = Color(0xFF212121);
   static const Color textSecondary = Color(0xFF757575);

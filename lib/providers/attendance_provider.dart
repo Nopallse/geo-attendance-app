@@ -90,6 +90,18 @@ class AttendanceProvider with ChangeNotifier {
     }
   }
 
+  // Check today's late arrival request to determine attendance status
+  Future<Map<String, dynamic>?> checkTodayLateArrivalRequest() async {
+    try {
+      // This would typically be called from a separate provider or service
+      // For now, we'll return null to indicate no late arrival request
+      return null;
+    } catch (e) {
+      debugPrint('Error checking today late arrival request: $e');
+      return null;
+    }
+  }
+
   // Get attendance history (initial load)
   Future<void> getAttendanceHistory({bool refresh = false}) async {
     if (refresh) {

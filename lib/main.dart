@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:absensi_app/data/api/firebase_api.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:logger/logger.dart';
@@ -11,6 +12,7 @@ import 'package:absensi_app/providers/auth_provider.dart';
 import 'package:absensi_app/providers/attendance_provider.dart';
 import 'package:absensi_app/providers/office_provider.dart';
 import 'package:absensi_app/providers/leave_provider.dart';
+import 'package:absensi_app/providers/late_arrival_provider.dart';
 import 'package:absensi_app/providers/notification_provider.dart';
 import 'package:absensi_app/router/app_router.dart';
 import 'firebase_options.dart';
@@ -63,6 +65,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<LeaveProvider>(
           create: (_) => getIt<LeaveProvider>(),
         ),
+        ChangeNotifierProvider<LateArrivalProvider>(
+          create: (_) => getIt<LateArrivalProvider>(),
+        ),
         ChangeNotifierProvider<NotificationProvider>(
           create: (_) => getIt<NotificationProvider>(),
         ),
@@ -74,6 +79,16 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
+        localizationsDelegates: [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('id', 'ID'), // Indonesian
+          Locale('en', 'US'), // English (fallback)
+        ],
+        locale: const Locale('id', 'ID'),
         routerConfig: AppRouter.router,
       ),
     );

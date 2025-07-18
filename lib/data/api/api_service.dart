@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import './endpoints.dart';
 import 'package:absensi_app/utils/device_utils.dart';
 import 'package:absensi_app/utils/shared_prefs_utils.dart';
@@ -24,6 +25,13 @@ class ApiService {
       headers["Content-Type"] = "application/json";
     }
 
+    // Add CORS headers for web platform
+    if (kIsWeb) {
+      headers["Access-Control-Allow-Origin"] = "*";
+      headers["Access-Control-Allow-Methods"] = "GET, POST, PATCH, DELETE, OPTIONS";
+      headers["Access-Control-Allow-Headers"] = "Origin, Content-Type, Accept, Device_Id";
+    }
+
     return headers;
   }
 
@@ -42,6 +50,18 @@ class ApiService {
       }
 
       logger.d("GET Request: $uri");
+      
+      // For web platform, first make an OPTIONS request
+      if (kIsWeb) {
+        try {
+          final optionsResponse = await http.Request('OPTIONS', uri).send();
+          logger.d("OPTIONS Response Status: ${optionsResponse.statusCode}");
+        } catch (e) {
+          logger.w("OPTIONS request failed: $e");
+          // Continue with GET request even if OPTIONS fails
+        }
+      }
+
       final response = await http.get(uri, headers: headers);
       logger.d("Response Status: ${response.statusCode}");
       logger.d("Response Body: ${response.body.substring(0, response.body.length > 100 ? 100 : response.body.length)}...");
@@ -65,6 +85,17 @@ class ApiService {
 
       logger.d("POST Request: $url");
       logger.d("POST Body: $body");
+
+      // For web platform, first make an OPTIONS request
+      if (kIsWeb) {
+        try {
+          final optionsResponse = await http.Request('OPTIONS', url).send();
+          logger.d("OPTIONS Response Status: ${optionsResponse.statusCode}");
+        } catch (e) {
+          logger.w("OPTIONS request failed: $e");
+          // Continue with POST request even if OPTIONS fails
+        }
+      }
 
       final response = await http.post(
         url,
@@ -97,6 +128,17 @@ class ApiService {
         logger.d("PATCH Body: $body");
       }
 
+      // For web platform, first make an OPTIONS request
+      if (kIsWeb) {
+        try {
+          final optionsResponse = await http.Request('OPTIONS', url).send();
+          logger.d("OPTIONS Response Status: ${optionsResponse.statusCode}");
+        } catch (e) {
+          logger.w("OPTIONS request failed: $e");
+          // Continue with PATCH request even if OPTIONS fails
+        }
+      }
+
       final response = await http.patch(
         url,
         headers: headers,
@@ -116,6 +158,17 @@ class ApiService {
   // Handle API response
   Map<String, dynamic> _handleResponse(http.Response response) {
     try {
+      // Check if response is HTML (indicating CORS or other server issues)
+      if (response.body.trim().startsWith('<!DOCTYPE html>') || 
+          response.body.trim().startsWith('<html')) {
+        logger.e("Received HTML response instead of JSON");
+        return {
+          "success": false,
+          "message": "Server returned HTML instead of JSON. This might be a CORS issue.",
+          "statusCode": response.statusCode
+        };
+      }
+
       final data = jsonDecode(response.body);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {

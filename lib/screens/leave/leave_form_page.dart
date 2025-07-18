@@ -4,6 +4,7 @@ import 'package:grouped_list/grouped_list.dart';
 import 'package:provider/provider.dart';
 import '../../providers/leave_provider.dart';
 import '../../data/models/leave_model.dart';
+import '../../styles/colors.dart';
 import 'create_leave_form_page.dart';
 
 class LeaveFormPage extends StatefulWidget {
@@ -14,11 +15,6 @@ class LeaveFormPage extends StatefulWidget {
 }
 
 class _LeaveFormPageState extends State<LeaveFormPage> {
-  final Color primaryColor = const Color(0xFF64B5F6);
-  final Color secondaryColor = const Color(0xFF90CAF9);
-  final Color backgroundColor = const Color(0xFFF5F9FF);
-  final Color surfaceColor = Colors.white;
-
   // Selected year for filtering
   String? _selectedYear;
   List<String> _yearOptions = [];
@@ -27,7 +23,10 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
   void initState() {
     super.initState();
     _generateYearOptions();
-    _loadLeaves();
+    // Schedule the data loading after the build phase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadLeaves();
+    });
   }
 
   void _generateYearOptions() {
@@ -75,23 +74,25 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           'Riwayat Cuti & Izin',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
-        backgroundColor: primaryColor,
+        backgroundColor: AppColors.primary,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white), // Set back button color to white
-
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreateLeaveForm,
-        backgroundColor: primaryColor,
+        backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Ajukan Izin',
           style: TextStyle(
@@ -119,14 +120,14 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                         Icon(
                           Icons.error_outline,
                           size: 64,
-                          color: Colors.red.shade300,
+                          color: AppColors.error,
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'Terjadi kesalahan: ${leaveProvider.error}',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.red.shade700,
+                            color: AppColors.error,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -154,7 +155,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
 
   Widget _buildYearFilter() {
     return Container(
-      color: surfaceColor,
+      color: AppColors.white,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
         children: [
@@ -163,7 +164,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
             style: TextStyle(
               fontWeight: FontWeight.w500,
               fontSize: 15,
-              color: Colors.grey.shade800,
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(width: 12),
@@ -172,8 +173,8 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-                color: surfaceColor,
+                border: Border.all(color: AppColors.border),
+                color: AppColors.white,
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -181,7 +182,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                   isExpanded: true,
                   icon: const Icon(Icons.keyboard_arrow_down),
                   style: TextStyle(
-                    color: Colors.grey.shade800,
+                    color: AppColors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
@@ -214,7 +215,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
           Icon(
             Icons.event_busy,
             size: 100,
-            color: Colors.grey.shade300,
+            color: AppColors.textHint,
           ),
           const SizedBox(height: 24),
           Text(
@@ -222,7 +223,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w500,
-              color: Colors.grey.shade600,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 8),
@@ -230,7 +231,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
             'Klik tombol "+ Ajukan Izin" untuk membuat permohonan baru',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade500,
+              color: AppColors.textHint,
             ),
             textAlign: TextAlign.center,
           ),
@@ -271,7 +272,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
               decoration: BoxDecoration(
-                color: secondaryColor,
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -288,7 +289,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 child: Divider(
-                  color: Colors.grey.shade300,
+                  color: AppColors.divider,
                   thickness: 1.0,
                 ),
               ),
@@ -348,7 +349,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: Colors.grey.shade100,
+          color: AppColors.border,
           width: 1,
         ),
       ),
@@ -413,7 +414,7 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                           leave.description ?? '',
                           style: TextStyle(
                             fontSize: 15,
-                            color: Colors.grey.shade700,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -433,14 +434,14 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                           Icon(
                             Icons.event,
                             size: 16,
-                            color: Colors.grey.shade600,
+                            color: AppColors.textSecondary,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             dateRange,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey.shade700,
+                              color: AppColors.textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -453,14 +454,14 @@ class _LeaveFormPageState extends State<LeaveFormPage> {
                             Icon(
                               Icons.access_time,
                               size: 16,
-                              color: Colors.grey.shade600,
+                              color: AppColors.textSecondary,
                             ),
                             const SizedBox(width: 6),
                             Text(
                               '${DateFormat('HH:mm').format(leave.startDate)} - ${DateFormat('HH:mm').format(leave.endDate)}',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey.shade700,
+                                color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

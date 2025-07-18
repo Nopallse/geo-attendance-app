@@ -7,10 +7,13 @@ import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 import 'package:safe_device/safe_device.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../providers/attendance_provider.dart';
 import '../../providers/office_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/attendance_model.dart';
+import '../../styles/colors.dart';
+import '../../styles/typography.dart';
 
 class AbsensiPage extends StatefulWidget {
   const AbsensiPage({super.key});
@@ -31,6 +34,10 @@ class _AbsensiPageState extends State<AbsensiPage> {
   bool _isEmulatorDetected = false;
   final logger = Logger();
 
+  // Responsive breakpoints
+  static const double mobileBreakpoint = 768;
+  static const double tabletBreakpoint = 1024;
+
   @override
   void initState() {
     super.initState();
@@ -41,20 +48,23 @@ class _AbsensiPageState extends State<AbsensiPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Load data from providers
     _loadInitialData();
   }
+
+  bool get _isMobile => MediaQuery.of(context).size.width < mobileBreakpoint;
+  bool get _isTablet => MediaQuery.of(context).size.width >= mobileBreakpoint && 
+                       MediaQuery.of(context).size.width < tabletBreakpoint;
+  bool get _isDesktop => MediaQuery.of(context).size.width >= tabletBreakpoint;
 
   Future<void> _checkDeviceSafety() async {
     try {
       bool isMockLocation = await SafeDevice.isMockLocation;
-      bool isRealDevice = await SafeDevice.isRealDevice; // benar: realDevice
+      bool isRealDevice = await SafeDevice.isRealDevice;
 
       setState(() {
         _isMockLocationDetected = isMockLocation;
-        _isEmulatorDetected = !isRealDevice; // emulator jika bukan real
+        _isEmulatorDetected = !isRealDevice;
       });
-
     } catch (e) {
       logger.e("Error checking device safety: $e");
     }
@@ -65,14 +75,17 @@ class _AbsensiPageState extends State<AbsensiPage> {
     required String message,
     required ContentType contentType,
   }) {
-    // Create the snackbar
     final snackBar = SnackBar(
       elevation: 0,
       behavior: SnackBarBehavior.floating,
       backgroundColor: Colors.transparent,
       duration: const Duration(seconds: 4),
-      // Position at the top with margin
-      margin: const EdgeInsets.only(top: kToolbarHeight + 20, left: 20, right: 20, bottom: 0),
+      margin: EdgeInsets.only(
+        top: kToolbarHeight + 20, 
+        left: _isMobile ? 20 : 40, 
+        right: _isMobile ? 20 : 40, 
+        bottom: 0
+      ),
       content: AwesomeSnackbarContent(
         title: title,
         message: message,
@@ -80,7 +93,6 @@ class _AbsensiPageState extends State<AbsensiPage> {
       ),
     );
 
-    // Show the snackbar at the top
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(snackBar);
@@ -90,21 +102,24 @@ class _AbsensiPageState extends State<AbsensiPage> {
     final officeProvider = Provider.of<OfficeProvider>(context, listen: false);
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
 
-    // Load offices if not already loaded
     if (officeProvider.offices.isEmpty) {
       await officeProvider.getOffices();
     }
 
-    // Get today's attendance
     await attendanceProvider.getTodayAttendance();
-
-    // Check if within radius after loading data
     _checkIfWithinRadius();
   }
 
   Future<void> _initializeLocationAndMarkers() async {
     try {
-      await _getCurrentLocation(); // Get location first
+      if (kIsWeb) {
+        // For web platform, we'll use a default position initially
+        setState(() {
+          _currentPosition = const LatLng(-6.200000, 106.816666);
+          _markersInitialized = true;
+        });
+      }
+      await _getCurrentLocation();
       setState(() {
         _markersInitialized = true;
       });
@@ -119,7 +134,6 @@ class _AbsensiPageState extends State<AbsensiPage> {
       Set<Marker> newMarkers = {};
       Set<Circle> newCircles = {};
 
-      // Pre-load marker icons to avoid race conditions
       final BitmapDescriptor myLocationIcon = await BitmapDescriptor.fromAssetImage(
         const ImageConfiguration(devicePixelRatio: 2.5),
         'assets/images/my_location_marker.png',
@@ -136,7 +150,6 @@ class _AbsensiPageState extends State<AbsensiPage> {
         return BitmapDescriptor.defaultMarker;
       });
 
-      // Add current location marker
       newMarkers.add(
         Marker(
           markerId: const MarkerId('current_location'),
@@ -146,7 +159,6 @@ class _AbsensiPageState extends State<AbsensiPage> {
         ),
       );
 
-      // Add office markers
       for (var office in officeProvider.offices) {
         newMarkers.add(
           Marker(
@@ -157,7 +169,6 @@ class _AbsensiPageState extends State<AbsensiPage> {
           ),
         );
 
-        // Add circle for each office's radius
         newCircles.add(
           Circle(
             circleId: CircleId('radius_${office.id}'),
@@ -170,12 +181,11 @@ class _AbsensiPageState extends State<AbsensiPage> {
         );
       }
 
-      // Only update state if the widget is still mounted
       if (mounted) {
         setState(() {
           _markers = newMarkers;
           _circles = newCircles;
-          _checkIfWithinRadius(); // Check if within radius after updating markers
+          _checkIfWithinRadius();
         });
       }
     } catch (e) {
@@ -186,15 +196,10 @@ class _AbsensiPageState extends State<AbsensiPage> {
   bool _isWithinAnyOfficeRadius(LatLng position) {
     final officeProvider = Provider.of<OfficeProvider>(context, listen: false);
     for (var office in officeProvider.offices) {
-      double distance = _calculateDistance(
-        position,
-        office.position,
-      );
-
+      double distance = _calculateDistance(position, office.position);
       if (distance <= office.radius) {
         return true;
       }
-
     }
     return false;
   }
@@ -216,13 +221,38 @@ class _AbsensiPageState extends State<AbsensiPage> {
     double dLon = lon2 - lon1;
 
     double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1) * math.cos(lat2) *
-            math.sin(dLon / 2) * math.sin(dLon / 2);
+        math.cos(lat1) * math.cos(lat2) * math.sin(dLon / 2) * math.sin(dLon / 2);
     double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return earthRadius * c;
   }
 
   Future<void> _getCurrentLocation() async {
+    if (kIsWeb) {
+      // For web platform, we'll use browser's geolocation
+      try {
+        var locationData = await _location.getLocation();
+        if (locationData.latitude == null || locationData.longitude == null) return;
+
+        LatLng newPosition = LatLng(locationData.latitude!, locationData.longitude!);
+
+        setState(() {
+          _currentPosition = newPosition;
+        });
+
+        _updateMarkersAndCircles();
+        await _checkDeviceSafety();
+
+        if (_mapController != null) {
+          _mapController!.animateCamera(
+              CameraUpdate.newLatLngZoom(_currentPosition, 18));
+        }
+      } catch (e) {
+        logger.e("Error getting location on web: $e");
+      }
+      return;
+    }
+
+    // Original mobile platform code
     bool serviceEnabled;
     PermissionStatus permissionGranted;
 
@@ -248,24 +278,18 @@ class _AbsensiPageState extends State<AbsensiPage> {
     });
 
     _updateMarkersAndCircles();
-
-    // Re-check for mock location when getting current location
     await _checkDeviceSafety();
 
     if (_mapController != null) {
       _mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(_currentPosition, 18)
-      );
+          CameraUpdate.newLatLngZoom(_currentPosition, 18));
     }
   }
 
   Future<void> _recordAttendance(bool isCheckIn) async {
     logger.d('Absen ${isCheckIn ? "masuk" : "keluar"}');
 
-    // Check for mock location before proceeding
     await _checkDeviceSafety();
-
-
 
     if (!_isWithinRadius) {
       _showAwesomeSnackBar(
@@ -279,7 +303,6 @@ class _AbsensiPageState extends State<AbsensiPage> {
     final attendanceProvider = Provider.of<AttendanceProvider>(context, listen: false);
 
     try {
-
       int? _getNearbyOfficeId() {
         final officeProvider = Provider.of<OfficeProvider>(context, listen: false);
         for (var office in officeProvider.offices) {
@@ -337,55 +360,18 @@ class _AbsensiPageState extends State<AbsensiPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.blue[50],
-      appBar: AppBar(
-        title: const Text(
-          'Absensi',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _getCurrentLocation();
-              Provider.of<AttendanceProvider>(context, listen: false).getTodayAttendance();
-              Provider.of<OfficeProvider>(context, listen: false).getOffices();
-            },
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.background,
+      appBar: _buildAppBar(),
       body: Consumer2<AttendanceProvider, OfficeProvider>(
         builder: (context, attendanceProvider, officeProvider, child) {
           final isLoading = attendanceProvider.isLoading || officeProvider.isLoading;
           final todayAttendance = attendanceProvider.todayAttendance;
-          print ("Today Attendance: $todayAttendance");
 
           return Stack(
             children: [
-              Column(
-                children: [
-                  _buildMapSection(officeProvider),
-                  _buildBottomSection(theme, todayAttendance),
-                ],
-              ),
-              if (isLoading)
-                Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+              _buildResponsiveBody(officeProvider, todayAttendance),
+              if (isLoading) _buildLoadingOverlay(),
             ],
           );
         },
@@ -393,6 +379,238 @@ class _AbsensiPageState extends State<AbsensiPage> {
     );
   }
 
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: Text(
+        'Absensi',
+        style: AppTypography.headline6.copyWith(
+          color: AppColors.textPrimary,
+        ),
+      ),
+      centerTitle: true,
+      backgroundColor: AppColors.white,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primary),
+        onPressed: () => context.pop(),
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh, color: AppColors.primary),
+          onPressed: () {
+            _getCurrentLocation();
+            Provider.of<AttendanceProvider>(context, listen: false).getTodayAttendance();
+            Provider.of<OfficeProvider>(context, listen: false).getOffices();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoadingOverlay() {
+    return Container(
+      color: Colors.black.withOpacity(0.5),
+      child: const Center(
+        child: CircularProgressIndicator(
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResponsiveBody(OfficeProvider officeProvider, Attendance? todayAttendance) {
+    if (_isMobile) {
+      return _buildMobileLayout(officeProvider, todayAttendance);
+    } else {
+      return _buildDesktopLayout(officeProvider, todayAttendance);
+    }
+  }
+
+  Widget _buildMobileLayout(OfficeProvider officeProvider, Attendance? todayAttendance) {
+    return Column(
+      children: [
+        _buildMapSection(officeProvider),
+        _buildBottomSection(todayAttendance),
+      ],
+    );
+  }
+
+  Widget _buildDesktopLayout(OfficeProvider officeProvider, Attendance? todayAttendance) {
+    return Padding(
+      padding: EdgeInsets.all(_isDesktop ? 32 : 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Map Section - Left side
+          Expanded(
+            flex: 2,
+            child: _buildDesktopMapSection(officeProvider),
+          ),
+          SizedBox(width: _isDesktop ? 32 : 16),
+          // Control Panel - Right side
+          Expanded(
+            flex: 1,
+            child: _buildDesktopControlPanel(todayAttendance),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopMapSection(OfficeProvider officeProvider) {
+    return Container(
+      height: MediaQuery.of(context).size.height - 120,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            if (_markersInitialized)
+              GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: _currentPosition,
+                  zoom: 18,
+                ),
+                onMapCreated: (GoogleMapController controller) {
+                  _mapController = controller;
+                  _updateMarkersAndCircles();
+                },
+                markers: _markers,
+                circles: _circles,
+                myLocationEnabled: false,
+                myLocationButtonEnabled: true,
+                zoomControlsEnabled: true,
+                mapToolbarEnabled: false,
+              ),
+            if (!_markersInitialized)
+              const Center(child: CircularProgressIndicator()),
+            _buildLocationStatus(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopControlPanel(Attendance? todayAttendance) {
+    return Container(
+      height: MediaQuery.of(context).size.height - 120,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Title Card
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.access_time,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Absensi Hari Ini',
+                            style: AppTypography.headline6.copyWith(
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(DateTime.now()),
+                            style: AppTypography.subtitle2.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          // Attendance Status
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Status Absensi',
+                    style: AppTypography.subtitle1.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: _buildDesktopAttendanceStatus(
+                      todayAttendance?.absenCheckIn,
+                      todayAttendance?.absenCheckOut,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildDesktopAttendanceButtons(
+                    todayAttendance?.absenCheckIn,
+                    todayAttendance?.absenCheckOut,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildMapSection(OfficeProvider officeProvider) {
     return Expanded(
@@ -403,7 +621,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.black.withOpacity(0.1),
               spreadRadius: 2,
               blurRadius: 8,
               offset: const Offset(0, 2),
@@ -414,7 +632,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
           borderRadius: BorderRadius.circular(24),
           child: Stack(
             children: [
-              if (_markersInitialized) // Only show map when markers are ready
+              if (_markersInitialized)
                 GoogleMap(
                   initialCameraPosition: CameraPosition(
                     target: _currentPosition,
@@ -422,7 +640,6 @@ class _AbsensiPageState extends State<AbsensiPage> {
                   ),
                   onMapCreated: (GoogleMapController controller) {
                     _mapController = controller;
-                    // Update markers once map is created
                     _updateMarkersAndCircles();
                   },
                   markers: _markers,
@@ -432,10 +649,8 @@ class _AbsensiPageState extends State<AbsensiPage> {
                   zoomControlsEnabled: false,
                   mapToolbarEnabled: false,
                 ),
-              if (!_markersInitialized) // Show loading indicator while initializing
-                const Center(
-                  child: CircularProgressIndicator(),
-                ),
+              if (!_markersInitialized)
+                const Center(child: CircularProgressIndicator()),
               _buildLocationStatus(),
             ],
           ),
@@ -456,7 +671,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.red[600],
+                color: AppColors.error,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
@@ -468,20 +683,15 @@ class _AbsensiPageState extends State<AbsensiPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.location_off,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  const Icon(Icons.location_off, color: AppColors.white, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _isMockLocationDetected
                           ? 'Fake GPS terdeteksi! Absensi tidak diizinkan'
                           : 'Aplikasi berjalan di emulator! Absensi tidak diizinkan',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
+                      style: AppTypography.subtitle2.copyWith(
+                        color: AppColors.white,
                       ),
                     ),
                   ),
@@ -491,7 +701,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: _isWithinRadius ? Colors.green[400] : Colors.orange[400],
+              color: _isWithinRadius ? AppColors.success : AppColors.warning,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -505,17 +715,14 @@ class _AbsensiPageState extends State<AbsensiPage> {
               children: [
                 Icon(
                   _isWithinRadius ? Icons.check_circle : Icons.warning,
-                  color: Colors.white,
+                  color: AppColors.white,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _isWithinRadius
-                      ? 'Dalam radius kantor'
-                      : 'Di luar radius kantor',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
+                  _isWithinRadius ? 'Dalam radius kantor' : 'Di luar radius kantor',
+                  style: AppTypography.subtitle2.copyWith(
+                    color: AppColors.white,
                   ),
                 ),
               ],
@@ -526,28 +733,111 @@ class _AbsensiPageState extends State<AbsensiPage> {
     );
   }
 
-  Widget _buildBottomSection(ThemeData theme, Attendance? todayAttendance) {
-    final checkInTime = todayAttendance?.absenCheckIn;
-    print("$todayAttendance <><><><><<>><><>");
-    final checkOutTime = todayAttendance?.absenCheckOut;
-
+  Widget _buildBottomSection(Attendance? todayAttendance) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildAttendanceStatus(
-            checkInTime ,
-            checkOutTime,
+            todayAttendance?.absenCheckIn,
+            todayAttendance?.absenCheckOut,
           ),
           const SizedBox(height: 24),
           _buildAttendanceButtons(
-            checkInTime ,
-            checkOutTime,
+            todayAttendance?.absenCheckIn,
+            todayAttendance?.absenCheckOut,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopAttendanceStatus(String? checkInTime, String? checkOutTime) {
+    return Column(
+      children: [
+        _buildAttendanceCard(
+          'Absen Masuk',
+          checkInTime,
+          Icons.login,
+          AppColors.success,
+          true,
+        ),
+        const SizedBox(height: 16),
+        _buildAttendanceCard(
+          'Absen Keluar',
+          checkOutTime,
+          Icons.logout,
+          AppColors.error,
+          checkInTime != null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAttendanceCard(
+    String label,
+    String? value,
+    IconData icon,
+    Color color,
+    bool isEnabled,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isEnabled ? color.withOpacity(0.05) : AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isEnabled ? color.withOpacity(0.2) : AppColors.divider,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isEnabled ? color.withOpacity(0.1) : AppColors.background,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: isEnabled ? color : AppColors.textHint,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTypography.subtitle2.copyWith(
+                    color: isEnabled ? AppColors.textSecondary : AppColors.textHint,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value ?? "Belum absen",
+                  style: AppTypography.bodyText1.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: value != null ? AppColors.textPrimary : AppColors.textHint,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -555,47 +845,28 @@ class _AbsensiPageState extends State<AbsensiPage> {
   }
 
   Widget _buildAttendanceStatus(String? checkInTime, String? checkOutTime) {
-    final formattedCheckInTime = checkInTime;
-    final formattedCheckOutTime = checkOutTime;
-    print("$checkInTime <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue[50],
+        color: AppColors.primary.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
-          _buildAttendanceRow(
-            'Absen Masuk',
-            formattedCheckInTime,
-            Icons.login,
-            Colors.green,
-          ),
-          if (formattedCheckInTime != null) ...[
+          _buildAttendanceRow('Absen Masuk', checkInTime, Icons.login, AppColors.success),
+          if (checkInTime != null) ...[
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
-              child: Divider(),
+              child: Divider(color: AppColors.divider),
             ),
-            _buildAttendanceRow(
-              'Absen Keluar',
-              formattedCheckOutTime,
-              Icons.logout,
-              Colors.red,
-            ),
+            _buildAttendanceRow('Absen Keluar', checkOutTime, Icons.logout, AppColors.error),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildAttendanceRow(
-      String label,
-      String? value,
-      IconData icon,
-      Color color,
-      ) {
+  Widget _buildAttendanceRow(String label, String? value, IconData icon, Color color) {
     return Row(
       children: [
         Container(
@@ -613,18 +884,16 @@ class _AbsensiPageState extends State<AbsensiPage> {
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
+                style: AppTypography.subtitle2.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value ?? "Belum absen",
-                style: TextStyle(
-                  fontSize: 16,
+                style: AppTypography.bodyText1.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: value != null ? Colors.black87 : Colors.grey,
+                  color: value != null ? AppColors.textPrimary : AppColors.textHint,
                 ),
               ),
             ],
@@ -635,8 +904,7 @@ class _AbsensiPageState extends State<AbsensiPage> {
   }
 
   Widget _buildAttendanceButtons(String? checkInTime, String? checkOutTime) {
-    // Disable buttons if mock location is detected
-    final bool disableButtons = _isMockLocationDetected ;
+    final bool disableButtons = _isMockLocationDetected;
 
     return Row(
       children: [
@@ -646,18 +914,17 @@ class _AbsensiPageState extends State<AbsensiPage> {
                 ? () => _recordAttendance(true)
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green[400],
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.success,
+              foregroundColor: AppColors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 0,
+              disabledBackgroundColor: AppColors.disabledButton,
             ),
             icon: const Icon(Icons.login),
-            label: const Text(
+            label: Text(
               'Absen Masuk',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style: AppTypography.buttonText,
             ),
           ),
         ),
@@ -668,18 +935,69 @@ class _AbsensiPageState extends State<AbsensiPage> {
                 ? () => _recordAttendance(false)
                 : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[400],
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 0,
+              disabledBackgroundColor: AppColors.disabledButton,
             ),
             icon: const Icon(Icons.logout),
-            label: const Text(
+            label: Text(
               'Absen Keluar',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style: AppTypography.buttonText,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopAttendanceButtons(String? checkInTime, String? checkOutTime) {
+    final bool disableButtons = _isMockLocationDetected;
+
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: (checkInTime == null && !disableButtons)
+                ? () => _recordAttendance(true)
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: AppColors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+              disabledBackgroundColor: AppColors.disabledButton,
+            ),
+            icon: const Icon(Icons.login),
+            label: Text(
+              'Absen Masuk',
+              style: AppTypography.buttonText,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: (checkInTime != null && checkOutTime == null && !disableButtons)
+                ? () => _recordAttendance(false)
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+              disabledBackgroundColor: AppColors.disabledButton,
+            ),
+            icon: const Icon(Icons.logout),
+            label: Text(
+              'Absen Keluar',
+              style: AppTypography.buttonText,
             ),
           ),
         ),

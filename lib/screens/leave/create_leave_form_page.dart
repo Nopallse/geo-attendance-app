@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/leave_provider.dart';
+import '../../styles/colors.dart';
 
 class CreateLeaveFormPage extends StatefulWidget {
   const CreateLeaveFormPage({super.key});
@@ -13,10 +14,6 @@ class CreateLeaveFormPage extends StatefulWidget {
 
 class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
   final _formKey = GlobalKey<FormState>();
-  final Color primaryColor = const Color(0xFF64B5F6);
-  final Color secondaryColor = const Color(0xFF90CAF9);
-  final Color backgroundColor = const Color(0xFFF5F9FF);
-  final Color surfaceColor = Colors.white;
 
   String? _leaveCategory;
   DateTime? _startDate;
@@ -45,7 +42,7 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary: primaryColor,
+              primary: AppColors.primary,
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
@@ -128,17 +125,21 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
           'Pengajuan Izin',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
-        backgroundColor: primaryColor,
+        backgroundColor: AppColors.primary,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white), // Set back button color to white
-
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SafeArea(
         child: Padding(
@@ -182,7 +183,7 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: primaryColor),
+                          borderSide: BorderSide(color: AppColors.primary),
                         ),
                         filled: true,
                         fillColor: Colors.white,
@@ -207,7 +208,7 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
                     child: ElevatedButton(
                       onPressed: _isSubmitting ? null : _submitForm,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -257,7 +258,7 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
+                color: AppColors.textPrimary,
               ),
             ),
             const Divider(),
@@ -277,15 +278,15 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryColor),
+          borderSide: BorderSide(color: AppColors.primary),
         ),
         filled: true,
         fillColor: Colors.white,
@@ -331,14 +332,14 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: AppColors.border),
               color: Colors.white,
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.date_range,
-                  color: primaryColor,
+                  color: AppColors.primary,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -350,8 +351,8 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
                     style: TextStyle(
                       fontSize: 16,
                       color: _startDate == null || _endDate == null
-                          ? Colors.grey.shade600
-                          : Colors.black87,
+                          ? AppColors.textHint
+                          : AppColors.textPrimary,
                     ),
                   ),
                 ),
@@ -359,7 +360,7 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
+                      color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
@@ -367,7 +368,7 @@ class _CreateLeaveFormPageState extends State<CreateLeaveFormPage> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: primaryColor,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
